@@ -17,6 +17,6 @@ echo "version_str: ${version_str}"
 echo "band: ${band}"
 echo "exants file: ${exants}"
 
-python /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runFHD/run_fhd_h4c_arrayJob.py ${obs_file_name} ${outdir} ${version_str} $SLURM_ARRAY_TASK_ID ${band} ${exants}
+python /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/run_fhd_h4c_arrayJob.py ${obs_file_name} ${outdir} ${version_str} $SLURM_ARRAY_TASK_ID ${band} ${exants}
 
 echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
