@@ -30,11 +30,11 @@ if [ -z ${outdir} ]; then
 fi
 N_obs=$(wc -l < $obs_file_name)
 
-echo "calling /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/call_Run_HERA_SSINS.sh"
+echo "calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/call_Run_HERA_SSINS.sh"
 
 xants_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/exants.yml"
-shape_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/HERA_shape_dict.yml"
+shape_file="/lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/HERA_shape_dict.yml"
 
 #echo "obs_file_name = ${obs_file_name}"
 
-sbatch --export=obs_file_name=${obs_file_name},N_obs=${N_obs},outdir=${outdir},xants=${xants_file},shape_dict=${shape_file} -p hera -o ${outdir}/SSINS.out -N 1 -n 1 --mem=64G -J SSINS_Flagging_N /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/call_Run_HERA_SSINS.sh
+sbatch --export=obs_file_name=${obs_file_name},N_obs=${N_obs},outdir=${outdir},xants=${xants_file},shape_dict=${shape_file} -p hera -o ${outdir}/SSINS.out -N 1 -n 1 --mem=64G -J SSINS_Flagging_N /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/call_Run_HERA_SSINS.sh
