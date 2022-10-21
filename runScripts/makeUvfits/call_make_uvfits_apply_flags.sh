@@ -19,10 +19,10 @@ echo "intersnap_only: ${intersnap_only}"
 echo "write_minis: ${write_minis}"
 echo "num_times: ${num_times}"
 
-echo "Calling /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/makeUvfits/make_uvfits_with_flags.py"
+echo "Calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py"
 
 
-python /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times}
+python /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times}
 
 
 echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
