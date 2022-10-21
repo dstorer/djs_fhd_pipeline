@@ -34,10 +34,10 @@ if [ -z ${outdir} ]; then
 fi
 N_obs=$(wc -l < $obs_file_name)
 
-echo "calling /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/makeUvfits/call_make_uvfits_apply_flags.sh"
+echo "calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/call_make_uvfits_apply_flags.sh"
 
 #xants_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459854/exants.yml"
-shape_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/HERA_shape_dict.yml"
+shape_file="/lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/HERA_shape_dict.yml"
 band="mid"
 N_combine=10
 internode_only=0
