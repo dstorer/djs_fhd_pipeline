@@ -29,9 +29,9 @@ echo "internode_only: ${internode_only}"
 echo "intersnap_only: ${intersnap_only}"
 echo "obs_file_name = ${obs_file_name}"
 echo "clobber: ${clobber}"
-echo "Calling /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py"
+echo "Calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runSSINS/Run_HERA_SSINS.py"
 
-python /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine}
+python /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine}
 
 
 #echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
