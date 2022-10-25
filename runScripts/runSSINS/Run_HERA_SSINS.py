@@ -13,6 +13,7 @@ import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import h5py
 import hdf5plugin
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--filename",
@@ -44,7 +45,6 @@ parser.add_argument("-n", "--n_combine", type=int, default=10,
 args = parser.parse_args()
 
 print(args.no_diff)
-
 print('ARGS:')
 print(args)
 print('\n')
@@ -52,6 +52,12 @@ if args.clobber == 1:
     clobber = True
 else:
     clobber = False
+    
+curr_path = os.path.abspath(__file__)
+print(f'Running {curr_path}')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
+print(f'githash: {githash}')
 ncomb = args.n_combine
 
 f = open(args.filename, "r")

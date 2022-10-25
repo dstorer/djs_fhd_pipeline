@@ -22,7 +22,8 @@ echo "num_times: ${num_times}"
 echo "Calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py"
 
 
-python /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times}
 
-
+echo "JOB INFO"
+squeue -j $SLURM_JOBID
 echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`

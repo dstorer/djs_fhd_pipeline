@@ -10,8 +10,6 @@ echo "There are $N_obs observations in this file"
 echo "Processing"
 
 
-
-
 stk_sig=20
 oth_sig=5
 t_aggro=0.5
@@ -31,7 +29,9 @@ echo "obs_file_name = ${obs_file_name}"
 echo "clobber: ${clobber}"
 echo "Calling /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py"
 
-python /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine}
+python -u /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine}
 
 
-#echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
+echo "JOB INFO"
+squeue -j $SLURM_JOBID
+echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`

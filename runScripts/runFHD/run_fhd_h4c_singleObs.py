@@ -21,6 +21,12 @@ print(str(args.obs_file))
 print('outdir is:')
 print(str(args.outdir))
 
+curr_path = os.path.abspath(__file__)
+print(f'Running {curr_path}')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
+print(f'githash: {githash}')
+
 overwrite = False
 
 if args.exants=="None":

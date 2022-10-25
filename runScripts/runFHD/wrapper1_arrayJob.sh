@@ -19,6 +19,5 @@ do
        exit 1;;
   esac
 done
-#t=${obs_file_name:54:-4}
 
-sbatch -- export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants} -o ${outdir}/FHD_${num_prefix}_${band}.out -N 1 -n 1 --mem=64G -J FHD_cal_${band} -p hera /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runFHD/wrapper2_arrayJob.sh 
+sbatch --export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants} --array=0-40%5 -o ${outdir}/FHD_${band}_${num_prefix}_%a.out -N 1 -n 1 --mem=64G -J FHD_cal_${band} -p hera /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh 

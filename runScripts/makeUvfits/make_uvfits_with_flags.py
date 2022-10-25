@@ -9,6 +9,7 @@ import yaml
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import h5py
 import hdf5plugin
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f','--obs_files', help='The path to a txt file containing the path to all raw uvh5 files to be executed on')
@@ -26,6 +27,12 @@ parser.add_argument("-m", "--write_minis", help='Option to also write out single
 parser.add_argument("-n", "--num_times", default=1,
                     help='Number of times to include in mini files. Only used if write_minis is set to 1.')
 args = parser.parse_args()
+
+curr_path = os.path.abspath(__file__)
+print(f'running {curr_path}')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
+print(f'githash: {githash}')
 
 if not os.path.exists(args.outdir):
     os.makedirs(args.outdir)
@@ -91,7 +98,7 @@ for i in range(0,len(file_names),N):
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
     version = f'{fname}_{args.band}'
     uvd.phase_to_time(phaseCenter)
-    uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}Obs.uvfits',spoof_nonessential=True)
+    uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs.uvfits',spoof_nonessential=True)
     if int(args.write_minis) == 1:
         print('Unique times are:')
         print(np.unique(uvd.time_array))
@@ -101,4 +108,4 @@ for i in range(0,len(file_names),N):
             uv_single = uvd.select(times=times,inplace=False)
             phaseCenter = np.median(np.unique(uv_single.time_array))
             uv_single.phase_to_time(phaseCenter)
-            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}Obs.uvfits',spoof_nonessential=True)
+            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}obs.uvfits',spoof_nonessential=True)

@@ -7,6 +7,7 @@ from os import path
 from pyuvdata import UVData
 import subprocess
 import yaml
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('obs_file', help='The path to a txt file containing the path to all uvfits files to be executed on')
@@ -24,6 +25,12 @@ print(str(args.outdir))
 print('Array ID is:')
 print(str(args.SLURM_ARRAY_TASK_ID))
 
+curr_path = os.path.abspath(__file__)
+print(f'Running {curr_path}')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
+print(f'githash: {githash}')
+
 overwrite = False
 
 if args.exants=="None":
@@ -35,21 +42,21 @@ else:
 if not os.path.exists(args.outdir):
     os.makedirs(args.outdir)
 
-ind = int(args.SLURM_ARRAY_TASK_ID)-1
+ind = int(args.SLURM_ARRAY_TASK_ID)
 if ind > 0:
-	print(f'ind is {ind}')
-	f = open(args.obs_file, "r")
-	file_names = f.read().split('\n')
-	filepath = file_names[ind]
-	print(file_names[ind])
-
-	uv = UVData()
-	uv.read(file_names[ind])
-	ants = uv.get_ants()
-	if len(xants)>0:
-		use_ants = [ant for ant in ants if ant not in xants]
-		uv.select(antenna_nums=use_ants)
-	unique = np.unique(uv.time_array)
+    print(f'ind is {ind}')
+    f = open(args.obs_file, "r")
+    file_names = f.read().split('\n')
+    filepath = file_names[ind]
+    print(file_names[ind])
+    
+    uv = UVData()
+    uv.read(file_names[ind])
+    ants = uv.get_ants()
+    if len(xants)>0:
+        use_ants = [ant for ant in ants if ant not in xants]
+        uv.select(antenna_nums=use_ants)
+    unique = np.unique(uv.time_array)
     version = f'{unique[0]}_{args.version_str}_{args.band}_{ind}'
     dirname = args.outdir + '/fhd_' + version + '/beams'
     sourcefile = f'{args.outdir}/fhd_{version}/output_data/{unique[0]}_{args.band}_uniform_Sources_XX.fits'

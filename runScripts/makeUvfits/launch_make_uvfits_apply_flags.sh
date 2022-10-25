@@ -41,8 +41,8 @@ shape_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScrip
 band="mid"
 N_combine=10
 internode_only=0
-intersnap_only=0
-write_minis=1
+intersnap_only=1
+write_minis=0
 num_times=1
 
 
