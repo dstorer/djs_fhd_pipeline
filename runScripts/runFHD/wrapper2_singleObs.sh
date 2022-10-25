@@ -18,6 +18,7 @@ echo "exants file: ${exants}"
 
 python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/run_fhd_h4c_singleObs.py ${obs_file_name} ${outdir} ${version_str} ${PBS_ARRAYID} ${band} ${exants}
 
+
 echo "JOB INFO"
 squeue -j $SLURM_JOBID
 echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
