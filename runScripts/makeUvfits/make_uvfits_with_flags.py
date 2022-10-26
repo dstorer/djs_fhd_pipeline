@@ -64,7 +64,7 @@ for i in range(0,len(file_names),N):
         print('Running all files in obs_files')
     data = file_names[i:i+N]
 #     print(data)
-    fname = data[0].split('/')[-1][0:-3]
+    fname = data[0].split('/')[-1][0:-5]
 #     print(fname)
     ssins = ssins_files[i//N]
     print('SSINS file:')
@@ -103,9 +103,9 @@ for i in range(0,len(file_names),N):
         print('Selecting intersnap baselines')
         snap_bls = []
         for num,a1 in enumerate(use_ants):
-            for a2 in use_ants:
-                if num%10==0:
+            if num%20==0:
                     print(f'Selecting on ant {num} of {len(use_ants)}')
+            for a2 in use_ants:
                 key1 = com_utils.get_ant_key(x,a1)
                 key2 = com_utils.get_ant_key(x,a2)
                 try:
@@ -136,7 +136,7 @@ for i in range(0,len(file_names),N):
     print('Phasing')
     uvd.phase_to_time(phaseCenter)
     print('Writing to uvfits')
-    uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs.uvfits',spoof_nonessential=True)
+    uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs_{args.ind}.uvfits',spoof_nonessential=True)
     if int(args.write_minis) == 1:
         print('Unique times are:')
         print(np.unique(uvd.time_array))
@@ -147,4 +147,4 @@ for i in range(0,len(file_names),N):
             uv_single = uvd.select(times=times,inplace=False)
             phaseCenter = np.median(np.unique(uv_single.time_array))
             uv_single.phase_to_time(phaseCenter)
-            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}obs.uvfits',spoof_nonessential=True)
+            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}obs_{args.ind}.uvfits',spoof_nonessential=True)
