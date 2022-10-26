@@ -10,6 +10,7 @@ os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import h5py
 import hdf5plugin
 import subprocess
+from hera_commissioning_tools import utils as com_utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f','--obs_files', help='The path to a txt file containing the path to all raw uvh5 files to be executed on')
@@ -26,6 +27,10 @@ parser.add_argument("-S", "--intersnap_only", type=int, default=0,
 parser.add_argument("-m", "--write_minis", help='Option to also write out single observation uvfits files.')
 parser.add_argument("-n", "--num_times", default=1,
                     help='Number of times to include in mini files. Only used if write_minis is set to 1.')
+parser.add_argument("-a", "--array_job", default=0,
+                    help='Indicates whether the job is an array job. If so, only one file, indicated by --ind, will be exected. Otherwise, all files in obs_files will be executed')
+parser.add_argument("--ind", default=0,
+                    help='File index to run on')
 args = parser.parse_args()
 
 curr_path = os.path.abspath(__file__)
@@ -43,66 +48,100 @@ f = open(args.ssins_files, "r")
 ssins_files = f.read().split('\n')
 
 with open(args.xants, 'r') as xfile:
-        xants = yaml.safe_load(xfile)
+    xants = yaml.safe_load(xfile)
+
+array_job = args.array_job
+print(f'array_job: {array_job}')
 
 N = int(args.N_combine)
+x = cm_hookup.get_hookup('default')
 for i in range(0,len(file_names),N):
+    if int(array_job) == 1:
+        if int(args.ind) != i//N:
+            continue
+        print(f'Running index {args.ind} of array job')
+    elif i==0:
+        print('Running all files in obs_files')
     data = file_names[i:i+N]
-    print(data)
+#     print(data)
     fname = data[0].split('/')[-1][0:-3]
-    print(fname)
+#     print(fname)
     ssins = ssins_files[i//N]
+    print('SSINS file:')
     print(ssins)
     uvd = UVData()
     uvd.read(data)
     use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
     uvd.select(antenna_nums=use_ants)
+    uvf = UVFlag()
+    uvf.read(ssins)
+    print('Data times:')
+    print(np.unique(uvd.time_array))
+    print('SSINS times:')
+    print(uvf.time_array)
+    if (np.unique(uvd.time_array)==uvf.time_array).all() is False:
+        print('!!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!!!!!')
+        print('Data file times do not match flag file times')
+        break
     if args.internode_only == 1:
+        print('Selecting internode baselines')
         int_bls = []
         for a1 in use_ants:
             for a2 in use_ants:
-                h = cm_hookup.Hookup()
-                x = h.get_hookup('HH')
-                key1 = 'HH%i:A' % (a1)
-                n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
-                key2 = 'HH%i:A' % (a2)
-                n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
-                if n1 != n2:
-                    int_bls.append((a1,a2))
+                key1 = com_utils.get_ant_key(x,a1)
+                key2 = com_utils.get_ant_key(x,a2)
+                try:
+                    n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
+                    n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
+                    if n1 != n2:
+                        int_bls.append((a1,a2))
+                except:
+                    print(f'ERROR - One of {key1} or {key2} not found in database!')
+                    continue
         uvd.select(bls=int_bls)
     elif args.intersnap_only == 1:
+        print('Selecting intersnap baselines')
         snap_bls = []
-        for a1 in use_ants:
+        for num,a1 in enumerate(use_ants):
             for a2 in use_ants:
-                h = cm_hookup.Hookup()
-                x = h.get_hookup('HH')
-                key1 = 'HH%i:A' % (a1)
-                s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                key2 = 'HH%i:A' % (a2)
-                s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                if n1 != n2:
-                    snap_bls.append((a1,a2))
+                if num%10==0:
+                    print(f'Selecting on ant {num} of {len(use_ants)}')
+                key1 = com_utils.get_ant_key(x,a1)
+                key2 = com_utils.get_ant_key(x,a2)
+                try:
+                    s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                    s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                    if s1 != s2:
+                        snap_bls.append((a1,a2))
+                except:
+                    print(f'ERROR - One of {key1} or {key2} not found in database!')
+                    continue
         uvd.select(bls=snap_bls)
-    uvf = UVFlag()
-    uvf.read(ssins)
+    print('Applying flags')
     utils.apply_uvflag(uvd,uvf)
     phaseCenter = np.median(np.unique(uvd.time_array))
     if args.band=='low':
         # 60-85 MHz
+        print(f'Selecting freqs in index range [108,312]')
         uvd.select(frequencies=uvd.freq_array[0][108:312])
     elif args.band=='mid':
         # 150-180 MHz
+        print(f'Selecting freqs in index range [845,1090]')
         uvd.select(frequencies=uvd.freq_array[0][845:1090])
     elif args.band=='high':
         # 200-220 MHz
+        print(f'Selecting freqs in index range [1254,1418]')
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
     version = f'{fname}_{args.band}'
+    print('Phasing')
     uvd.phase_to_time(phaseCenter)
+    print('Writing to uvfits')
     uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs.uvfits',spoof_nonessential=True)
     if int(args.write_minis) == 1:
         print('Unique times are:')
         print(np.unique(uvd.time_array))
         nint = int(args.num_times)
+        print('Writing minis')
         for t in range(0,len(np.unique(uvd.time_array)),nint):
             times = np.unique(uvd.time_array)[t:t+nint]
             uv_single = uvd.select(times=times,inplace=False)
