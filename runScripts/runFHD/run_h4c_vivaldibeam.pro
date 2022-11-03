@@ -15,6 +15,7 @@ PRO run_h4c_vivaldibeam,_Extra=extra
   no_frequency_flagging=1
 
   calibrate_visibilities=1
+  cal_time_average=0
   flag_calibration=0
   recalculate_all=1
   no_png=1
