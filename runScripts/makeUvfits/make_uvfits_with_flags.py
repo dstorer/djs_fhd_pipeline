@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-f','--obs_files', help='The path to a txt file containing the path to all raw uvh5 files to be executed on')
 parser.add_argument('-s','--ssins_files', help='The path to a txt file containing the path to all ssins files to be flagged with, typically files ending in flags.h5')
 parser.add_argument('-o','--outdir', help='Output directory')
-parser.add_argument('-N','--N_combine', help='Number of raw files to combine into one uvfits file')
+parser.add_argument('-N','--N_combine', help='Number of raw files to combine into one uvfits file. Must match the number of raw files used to create the ssins flags.')
 parser.add_argument('-b','--band', help='Frequency band (low, med, or high) to write out')
 parser.add_argument("-x", "--xants",
                     help="The path to a yml file containing a list of antennas to exclude")

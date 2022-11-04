@@ -43,8 +43,8 @@ band="mid"
 N_combine=10
 internode_only=0
 intersnap_only=1
-write_minis=0
-num_times=1
+write_minis=1
+num_times=10
 array_job=1
 
 

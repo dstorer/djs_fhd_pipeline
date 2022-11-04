@@ -598,3 +598,4 @@ def get_zenithRA(time_array,telescope_location):
             zen = zen.ra.degree
             zens.append(zen)
     return zens
+

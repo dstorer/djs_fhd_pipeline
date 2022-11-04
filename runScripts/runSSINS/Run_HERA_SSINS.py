@@ -14,6 +14,7 @@ os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import h5py
 import hdf5plugin
 import subprocess
+from hera_commissioning_tools import utils as com_utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--filename",
@@ -42,6 +43,8 @@ parser.add_argument("-S", "--intersnap_only", type=int, default=0,
                     help="The number of baselines to read in at a time")
 parser.add_argument("-n", "--n_combine", type=int, default=10,
                     help="The number of files to combine when running SSINS and calculating flags")
+parser.add_argument("-i", "--node", default='all',
+                    help="If not all, node number to exclusively use for flagging")
 args = parser.parse_args()
 
 print(args.no_diff)
@@ -87,47 +90,72 @@ for i,f1 in enumerate(file_names[::ncomb]):
     use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
     uvd.select(antenna_nums=use_ants)
     
-    if args.internode_only==1 or args.intersnap_only==1:
+    x = cm_hookup.get_hookup('default')
+    if args.internode_only==1 or args.intersnap_only==1 or args.node != 'all':
+        if args.internode_only == 1 and args.node != 'all':
+            raise Exception('internode_only must be disabled when node is specified')
         if i==0:
             int_bls = []
             snap_bls = []
+            node_bls = []
             for a1 in use_ants:
+                known_bad=False
                 for a2 in use_ants:
                     if a1<a2:
-                        h = cm_hookup.Hookup()
-                        x = h.get_hookup('HH')
-                        key1 = 'HH%i:A' % (a1)
-                        n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
-                        s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                        key2 = 'HH%i:A' % (a2)
-                        n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
-                        s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                        if n1 != n2:
-                            int_bls.append((a1,a2))
-                            snap_bls.append((a1,a2))
-                        elif n1==n2 and s1!=s2:
-                            snap_bls.append((a1,a2))
+                        key1 = com_utils.get_ant_key(x,a1)
+                        key2 = com_utils.get_ant_key(x,a2)
+                        try:
+                            n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
+                            s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                            n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
+                            s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                            if n1 != n2:
+                                int_bls.append((a1,a2))
+                                snap_bls.append((a1,a2))
+                            elif n1==n2 and s1!=s2:
+                                snap_bls.append((a1,a2))
+                            if n1 == args.node and n2 == args.node:
+                                if args.intersnap_only == 1 and s1!=s2:
+                                    node_bls.append((a1,a2))
+                                elif args.intersnap_only == 0:
+                                    node_bls.append((a1,a2))
+                        except:
+                            if known_bad is True:
+                                print(f'ERROR - One of {key1} or {key2} not found in database!')
+                                known_bad = True
+                            continue
         if args.internode_only==1:
             print('###### Excluding all intranode baselines ######')
             uvd.select(bls=int_bls)
-        else:
+        elif args.intersnap_only==1:
             print('###### Excluding all intrasnap baselines ######')
             uvd.select(bls=snap_bls)
-    elif args.intersnap_only == 1:
-        if i==0:
-            print('###### Excluding all intrasnap baselines ######')
-            snap_bls = []
-            for a1 in use_ants:
-                for a2 in use_ants:
-                    h = cm_hookup.Hookup()
-                    x = h.get_hookup('HH')
-                    key1 = 'HH%i:A' % (a1)
-                    s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                    key2 = 'HH%i:A' % (a2)
-                    s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                    if s1 != s2:
-                        snap_bls.append((a1,a2))
-        uvd.select(bls=snap_bls)
+        elif args.node != 'all':
+            print(f'###### Selecting antennas in node {args.node}')
+            if args.intersnap_only==1:
+                print('###### Excluding all intrasnap baselines ######')
+            uvd.select(bls=node_bls)
+#     if args.node != 'all':
+#         if args.internode_only==1:
+#             raise Exception('Cannot select internode baselines when node is also specified')
+#         if i==0:
+#             use_bls = []
+#             for a1 in 
+#     elif args.intersnap_only == 1:
+#         if i==0:
+#             print('###### Excluding all intrasnap baselines ######')
+#             snap_bls = []
+#             for a1 in use_ants:
+#                 for a2 in use_ants:
+#                     h = cm_hookup.Hookup()
+#                     x = h.get_hookup('HH')
+#                     key1 = 'HH%i:A' % (a1)
+#                     s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
+#                     key2 = 'HH%i:A' % (a2)
+#                     s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
+#                     if s1 != s2:
+#                         snap_bls.append((a1,a2))
+#         uvd.select(bls=snap_bls)
 
     bls = uvd.get_antpairs()
     uvf = UVFlag(uvd, waterfall=True, mode='flag')

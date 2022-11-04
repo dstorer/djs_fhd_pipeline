@@ -1,13 +1,14 @@
 #!/bin/bash
 
 
-while getopts ":f:o:" option
+while getopts ":f:o:x:" option
 do
   case $option in
     # A text file where each line is an obsid
     f) obs_file_name="$OPTARG";;
     # The output directory for the error log
     o) outdir=$OPTARG;;
+    x) xants_file=$OPTARG;;
     \?) echo "Unknown option: Accepted flags are -f (obs_file_name),"
         exit 1;;
     :) echo "Missing option argument for input flag"
@@ -32,7 +33,7 @@ N_obs=$(wc -l < $obs_file_name)
 
 echo "calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/call_Run_HERA_SSINS.sh"
 
-xants_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/exants.yml"
+# xants_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/exants.yml"
 shape_file="/lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/HERA_shape_dict.yml"
 
 #echo "obs_file_name = ${obs_file_name}"

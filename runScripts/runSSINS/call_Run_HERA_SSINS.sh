@@ -15,8 +15,9 @@ oth_sig=5
 t_aggro=0.5
 internode_only=0
 intersnap_only=1
-clobber=1
+clobber=0
 n_combine=10
+nodes='all'
 
 echo "streak_sig = ${stk_sig}"
 echo "other_sig = ${oth_sig}"
@@ -27,9 +28,9 @@ echo "internode_only: ${internode_only}"
 echo "intersnap_only: ${intersnap_only}"
 echo "obs_file_name = ${obs_file_name}"
 echo "clobber: ${clobber}"
-echo "Calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runSSINS/Run_HERA_SSINS.py"
+echo "Calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/Run_HERA_SSINS.py"
 
-python -u /lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/Run_HERA_SSINS.py -f ${obs_file_name} -s ${stk_sig} -o ${oth_sig} -p ${outdir} -a ${xants} -d ${shape_dict} -t ${t_aggro} -I ${internode_only} -S ${intersnap_only} -c ${clobber} -n ${n_combine} -i ${nodes}
 
 
 echo "JOB INFO"
