@@ -26,19 +26,13 @@ parser.add_argument('-R','--RAW', default=0, help='Boolean indicating whether to
 parser.add_argument('-C','--CAL', default=0, help='Boolean indicating whether to read and write calibrated data files')
 parser.add_argument('-M','--MODEL', default=0, help='Boolean indicating whether to read and write model visibility files')
 parser.add_argument('-S','--SSINS', default=0, help='Boolean indicating whether to read and write ssins flag files')
-parser.add_argument('-B','--BLS', default=0, help='Boolean indicating whether to write baseline set')
+parser.add_argument('-B','--BLS', default=1, help='Boolean indicating whether to write baseline set')
 parser.add_argument('-L','--LSTS', default=0, help='Boolean indicating whether to read and write LST values')
 parser.add_argument('-J','--JDS', default=0, help='Boolean indicating whether to read and write JD values')
 
 args = parser.parse_args()
 
-# CAL=False
-# MODEL=False
-# RAW=False
-# SSINS=True
-# BLS=False
-# LSTS=False
-# JDS=False
+polarizations=[-5]
 
 clip_data = False
 startJD = 2459855.63237
@@ -101,6 +95,7 @@ for i,fhd in enumerate(fhd_files):
     for f in vis_files:
         flist.append(fhd + 'vis_data/' + obsname + '_' + f)
     fhd_file_array.append(flist)
+    
             
 print('Reading raw metadata')
 raw_jds = []
@@ -116,7 +111,7 @@ if clip_data is True:
     print(f'Starting with index {startind}, which is file {raw_data[startind]}')
     print(f'Stopping with index {stopind}, which is file {raw_data[stopind]}')
     raw_data = raw_data[startind:stopind]
-
+mid_jd = raw_jds[len(raw_jds)//2]
 
 file_read = False
 for i,flist in enumerate(fhd_file_array):
@@ -131,12 +126,15 @@ for i,flist in enumerate(fhd_file_array):
         use_ants = calData.get_ants()
 #         bls = np.unique(calData.baseline_array)
         bls = calData.get_antpairs()
+        print('Baselines:')
+        print(bls)
         Nbls = calData.Nbls
         print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
         break
     
 raw = UVData()
-raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
+# raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
+raw.read(raw_data)
 if int(args.JDS) == 1:
     print('Writing JD array')
     jds = raw.time_array
@@ -154,6 +152,8 @@ if int(args.LSTS) == 1:
 #     use_ants = [a for a in raw.get_ants() if a not in xants]
 #     raw.select(antenna_nums=use_ants)
 print('Performing baseline selection on raw data to match baseline set in cal and model data')
+print('Raw baselines:')
+print(raw.get_antpairs())
 raw.select(bls=bls)
 
 Ntimes = raw.Ntimes
@@ -162,98 +162,124 @@ Nbls = raw.Nbls
 Nfreqs = len(freqs)
 Npols = raw.Npols
 antpairs = np.asarray(raw.get_antpairs())
-if args.BLS == 1:
-    np.save(f'{args.outdir}/{args.juliandate}_bl_array',antpairs)
+if int(args.BLS) == 1:
+    print('Writing baseline array')
+    file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
+    with open(file, 'wb') as f:
+        np.save(f,antpairs)
 # raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
 del raw
 
 if int(args.RAW) == 1:
     print('Reading raw data') 
-    raw_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
-    for i,flist in enumerate(raw_data):
-        if i%50 == 0:
-            print(f'Reading {i}th file of {len(raw_data)}')
-        rawData = UVData()
-        if clipFreqs:
-            rawData.read(flist,polarizations=[-5],freq_chans=freqs,bls=bls)
-        else:
-            rawData.read(flist,polarizations=[-5],bls=bls)
-        d = rawData.data_array[:,0,:,0]
-        t = len(np.unique(rawData.time_array))
-        print(f'ntimes: {t}')
-        if i*t+t >= np.shape(raw_array)[0]:
-            print('ERROR: raw_array already full - cant add more data')
-            break
-        d = np.reshape(d,(t,-1,rawData.Nfreqs))
-        if i==0:
-            print('data shape:')
-            print(np.shape(d))
-        print(f'Adding obs with means {np.nanmean(np.abs(d[0,:,:]))} and {np.nanmean(np.abs(d[1,:,:]))} into rows {i*t}:{i*t+t} of raw_array')
-        raw_array[i*t:i*t+t,:,:] = d
-        print(np.nanmean(np.abs(raw_array[:,100,:]),axis=1))
+#     raw_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
+#     for i,flist in enumerate(raw_data):
+#         if i%50 == 0:
+#             print(f'Reading {i}th file of {len(raw_data)}')
+#         rawData = UVData()
+#         if clipFreqs:
+#             rawData.read(flist,polarizations=[-5],freq_chans=freqs,bls=bls)
+#         else:
+#             rawData.read(flist,polarizations=[-5],bls=bls)
+#         d = rawData.data_array[:,0,:,0]
+#         t = len(np.unique(rawData.time_array))
+# #         print(f'ntimes: {t}')
+#         if i*t+t >= np.shape(raw_array)[0]:
+#             print('ERROR: raw_array already full - cant add more data')
+#             break
+#         d = np.reshape(d,(t,-1,rawData.Nfreqs))
+#         if i==0:
+#             print('data shape:')
+#             print(np.shape(d))
+# #         print(f'Adding obs with means {np.nanmean(np.abs(d[0,:,:]))} and {np.nanmean(np.abs(d[1,:,:]))} into rows {i*t}:{i*t+t} of raw_array')
+#         raw_array[i*t:i*t+t,:,:] = d
+# #         print(np.nanmean(np.abs(raw_array[:,100,:]),axis=1))
+    rawData = UVData()
+    if clipFreqs:
+        rawData.read(raw_data,polarizations=[-5],freq_chans=freqs,bls=bls)
+    else:
+        rawData.read(raw_data,polarizations=[-5],bls=bls)
+    
     print('Writing Raw Data Array')
-    np.save(f'{args.outdir}/{args.juliandate}_fhd_raw_data', raw_array)
+    file = f'{args.outdir}/{args.juliandate}_fhd_raw_data.uvfits'
+    rawData.write_uvfits(file)
+#     with open(file, 'wb') as f:
+#         np.save(f, raw_array)
     del raw_array
 
 if int(args.CAL) == 1:
     print('Reading calibrated data') 
     nobs = int(args.nobs)
     cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
-    fhd_read = False
-    for i,flist in enumerate(fhd_file_array):
-        if i%10 == 0:
-            print(f'Reading {i}th file of {len(fhd_file_array)}')
-        if obs[i] == 0:
-            print(f'Skipping obs {i} for having no FHD solutions')
-            continue
-        if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
-            if clip_data:
-                print(f'Skipping obs {obs[i]} for being outside JD range')
-                continue
-        if fhd_read is False:
-            calData = UVData()
-            calData.read(flist,use_model=False)
-            calData.select(polarizations=[-5])
-            use_ants = calData.get_ants()
-            Nbls = calData.Nbls
-            print('Initiating array')
-            cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
-            fhd_read=True
-        calData = UVData()
-        calData.read(flist,use_model=False)
-        calData.select(polarizations=[-5])
-        d = calData.data_array
-        t = len(np.unique(calData.time_array))
-        d = np.reshape(d,(t,-1,calData.Nfreqs))
-#         print(f'Adding obs with mean {np.nanmean(d)} into rows {i*t}:{i*t+t} of cal_array')
-        cal_array[i*t:i*t+t,:,:] = d
-#         print(f'cal_array now has sum {np.sum(cal_array)}')
-    print('Writing Calibrated Data Array')
+#     fhd_read = False
+#     for i,flist in enumerate(fhd_file_array):
+#         if i%10 == 0:
+#             print(f'Reading {i}th file of {len(fhd_file_array)}')
+#         if obs[i] == 0:
+#             print(f'Skipping obs {i} for having no FHD solutions')
+#             continue
+#         if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
+#             if clip_data:
+#                 print(f'Skipping obs {obs[i]} for being outside JD range')
+#                 continue
+#         if fhd_read is False:
+#             calData = UVData()
+#             calData.read(flist,use_model=False)
+#             calData.select(polarizations=[-5])
+#             use_ants = calData.get_ants()
+#             Nbls = calData.Nbls
+#             print('Initiating array')
+#             cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
+#             fhd_read=True
+#         calData = UVData()
+#         calData.read(flist,use_model=False)
+#         calData.select(polarizations=[-5])
+#         d = calData.data_array
+#         t = len(np.unique(calData.time_array))
+#         d = np.reshape(d,(t,-1,calData.Nfreqs))
+# #         print(f'Adding obs with mean {np.nanmean(d)} into rows {i*t}:{i*t+t} of cal_array')
+#         cal_array[i*t:i*t+t,:,:] = d
+# #         print(f'cal_array now has sum {np.sum(cal_array)}')
+    
 #     print(cal_array)
-    np.save(f'{args.outdir}/{args.juliandate}_fhd_calibrated_data', cal_array)
+    calData = UVData()
+    calData.read(fhd_file_array,use_model=False,ignore_name=True)
+    calData.select(polarizations=[-5])
+    print('Writing Calibrated Data Array')
+    file = f'{args.outdir}/{args.juliandate}_fhd_calibrated_data.uvfits'
+    calData.write_uvfits(file)
+#     with open(file,'wb') as f:
+#         np.save(f, cal_array)
     del cal_array
 
 if int(args.MODEL) == 1:
     print('Reading model data') 
-    cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
-    for i,flist in enumerate(fhd_file_array):
-        if i%10 == 0:
-            print(f'Reading {i}th file of {len(fhd_file_array)}')
-        if obs[i] == 0:
-            continue
-        if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
-            if clip_data:
-                print(f'Skipping obs {obs[i]} for being outside JD range')
-                continue
-        calData = UVData()
-        calData.read(flist,use_model=True)
-        calData.select(polarizations=[-5])
-        d = calData.data_array
-        t = len(np.unique(calData.time_array))
-        d = np.reshape(d,(t,-1,calData.Nfreqs))
-        cal_array[i*t:i*t+t,:,:] = d
+#     cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
+#     for i,flist in enumerate(fhd_file_array):
+#         if i%10 == 0:
+#             print(f'Reading {i}th file of {len(fhd_file_array)}')
+#         if obs[i] == 0:
+#             continue
+#         if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
+#             if clip_data:
+#                 print(f'Skipping obs {obs[i]} for being outside JD range')
+#                 continue
+#         calData = UVData()
+#         calData.read(flist,use_model=True)
+#         calData.select(polarizations=[-5])
+#         calData.phase_to_time(mid_jd)
+#         d = calData.data_array
+#         t = len(np.unique(calData.time_array))
+#         d = np.reshape(d,(t,-1,calData.Nfreqs))
+#         cal_array[i*t:i*t+t,:,:] = d
+    calData = UVData()
+    calData.read(fhd_file_array,use_model=True,ignore_name=True)
+    calData.select(polarizations=[-5])
     print('Writing model Data Array')
-    np.save(f'{args.outdir}/{args.juliandate}_fhd_model_data', cal_array)
+    file = f'{args.outdir}/{args.juliandate}_fhd_model_data.uvfits'
+    calData.write_uvfits(file)
+#     with open(file, 'wb') as f:
+#         np.save(f, cal_array)
     del cal_array
 
 
@@ -266,7 +292,7 @@ if int(args.SSINS) == 1:
 #     flags = flags.flag_array[:,845:1090,0]
 
     print('Writing flags')
-    flags.write(f'{args.outdir}/{args.juliandate}_ssins_flags.hdf5')
+    flags.write(f'{args.outdir}/{args.juliandate}_ssins_flags.hdf5',clobber=True)
 #     np.save(f'{args.outdir}/{args.juliandate}_ssins_flags', flags)
 
 

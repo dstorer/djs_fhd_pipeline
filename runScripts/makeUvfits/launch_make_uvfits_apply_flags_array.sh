@@ -46,6 +46,7 @@ intersnap_only=1
 write_minis=1
 num_times=10
 array_job=1
+phase="perset"
 
 
 echo "Submitting array job"
@@ -53,5 +54,5 @@ echo "startind: ${startind}"
 echo "stopind: ${stopind}"
 echo "nsim: ${nsim}"
 
-sbatch --export=obs_file_name=${obs_file_name},ssins_files=${ssins_files},outdir=${outdir},N_combine=${N_combine},xants=${xants_file},band=${band},internode_only=${internode_only},intersnap_only=${intersnap_only},write_minis=${write_minis},num_times=${num_times},array_job=${array_job} -p hera -o ${outdir}/make_uvfits_%a.out -N 1 -n 1 --mem=128G -J make_uvfits --array=${startind}-${stopind}%${nsim} /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/call_make_uvfits_apply_flags.sh
+sbatch --export=obs_file_name=${obs_file_name},ssins_files=${ssins_files},outdir=${outdir},N_combine=${N_combine},xants=${xants_file},band=${band},internode_only=${internode_only},intersnap_only=${intersnap_only},write_minis=${write_minis},num_times=${num_times},array_job=${array_job},phase=${phase},N_obs=${N_obs} -p hera -o ${outdir}/make_uvfits_%a.out -N 1 -n 1 --mem=128G -J make_uvfits --array=${startind}-${stopind}%${nsim} /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/call_make_uvfits_apply_flags.sh
 

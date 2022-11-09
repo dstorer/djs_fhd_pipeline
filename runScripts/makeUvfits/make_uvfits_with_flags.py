@@ -31,8 +31,11 @@ parser.add_argument("-a", "--array_job", default=0,
                     help='Indicates whether the job is an array job. If so, only one file, indicated by --ind, will be exected. Otherwise, all files in obs_files will be executed')
 parser.add_argument("--ind", default=0,
                     help='File index to run on')
+parser.add_argument('-p', '--phase', default='perobs',
+                    help='Option to phase the data to the center of each observation (perobs) or to the center of the whole set of observations (perset)')
 args = parser.parse_args()
 
+print('\n')
 curr_path = os.path.abspath(__file__)
 print(f'running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -46,6 +49,10 @@ f = open(args.obs_files, "r")
 file_names = f.read().split('\n')
 f = open(args.ssins_files, "r")
 ssins_files = f.read().split('\n')
+
+jds = [x.split('/')[-1].split('.sum')[0][4:] for x in file_names[:-1]]
+jds = [float(j) for j in jds]
+mid_jd = jds[len(jds)//2]
 
 with open(args.xants, 'r') as xfile:
     xants = yaml.safe_load(xfile)
@@ -69,10 +76,12 @@ for i in range(0,len(file_names),N):
     ssins = ssins_files[i//N]
     print('SSINS file:')
     print(ssins)
+    print('\nreading data')
     uvd = UVData()
     uvd.read(data)
     use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
     uvd.select(antenna_nums=use_ants)
+    print('Reading SSINS \n')
     uvf = UVFlag()
     uvf.read(ssins)
     print('Data times:')
@@ -119,7 +128,12 @@ for i in range(0,len(file_names),N):
         uvd.select(bls=snap_bls)
     print('Applying flags')
     utils.apply_uvflag(uvd,uvf)
-    phaseCenter = np.median(np.unique(uvd.time_array))
+    if args.phase == 'perobs':
+        phaseCenter = np.median(np.unique(uvd.time_array))
+    elif args.phase == 'perset':
+        phaseCenter = mid_jd
+    else:
+        print(f'ERROR! phase argument must be set to either perobs or perset. Currently set to {args.phase}')
     if args.band=='low':
         # 60-85 MHz
         print(f'Selecting freqs in index range [108,312]')
@@ -133,7 +147,7 @@ for i in range(0,len(file_names),N):
         print(f'Selecting freqs in index range [1254,1418]')
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
     version = f'{fname}_{args.band}'
-    print('Phasing')
+    print(f'Phasing observation to time {phaseCenter}')
     uvd.phase_to_time(phaseCenter)
     print('Writing to uvfits')
     uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs_{args.ind}.uvfits',spoof_nonessential=True)

@@ -16,6 +16,7 @@ parser.add_argument('version_str', help='A string to include in the name of all 
 parser.add_argument('SLURM_ARRAY_TASK_ID', help='The index of the array job to run')
 parser.add_argument('band', help='Options are low,mid,high,full - determines frequency band')
 parser.add_argument('exants', help='A yml file containing a list of flagged antennas')
+parser.add_argument('license', default='NRAO', help='specify which IDL license to use. Can be NRAO or HERA')
 args = parser.parse_args()
 
 print('obs_file is:')
@@ -65,4 +66,7 @@ if ind > 0:
     elif path.exists(dirname) and overwrite is False:
         print('%s has already been run - SKIPPING' % version)
     else:
-        os.system("idl -e run_h4c_vivaldibeam -args " + filepath + " " + version + " " + args.outdir)
+        if args.license == 'NRAO':
+            os.system("idl -e run_h4c_vivaldibeam -args " + filepath + " " + version + " " + args.outdir)
+        elif args.license == 'HERA':
+            os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam -args " + filepath + " " + version + " " + args.outdir)

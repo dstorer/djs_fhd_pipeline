@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while getopts ":f:o:v:n:b:a:x:" option
+while getopts ":f:o:v:n:b:a:x:l:" option
 do
   case $option in
     # A text file where each line is an obsid
@@ -15,6 +15,8 @@ do
     a) exants=$OPTARG;;
     # Array job string (start-stop%interval)
     x) x=$OPTARG;;
+    # Specify IDL license to use - either NRAO or HERA
+    l) license=$OPTARG;;
     \?) echo "Unknown option: Accepted flags are -f (obs_file_name),"
         exit 1;;
     :) echo "Missing option argument for input flag"
@@ -23,4 +25,4 @@ do
 done
 
 
-sbatch --export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants} --array=${x} -o ${outdir}/FHD_${band}%a.out -N 1 -n 1 --mem=32G -J FHD_cal_${band} -p hera /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh
+sbatch --export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants},license=${license} --array=${x} -o ${outdir}/FHD_${band}%a.out -N 1 -n 1 --mem=32G -J FHD_cal_${band} -p hera /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh

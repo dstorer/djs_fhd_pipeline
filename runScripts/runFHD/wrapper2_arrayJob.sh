@@ -15,9 +15,12 @@ echo "outdir: ${outdir}"
 echo "version_str: ${version_str}"
 echo "band: ${band}"
 echo "exants file: ${exants}"
+echo "IDL license: ${license}"
 
-python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/run_fhd_h4c_arrayJob.py ${obs_file_name} ${outdir} ${version_str} $SLURM_ARRAY_TASK_ID ${band} ${exants}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/run_fhd_h4c_arrayJob.py ${obs_file_name} ${outdir} ${version_str} $SLURM_ARRAY_TASK_ID ${band} ${exants} ${license}
 
 echo "JOB INFO"
 squeue -j $SLURM_JOBID
+
+seff $SLURM_JOBID
 echo "JOB END TIME" `date +"%Y-%m-%d_%H:%M:%S"`
