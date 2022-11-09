@@ -130,6 +130,142 @@ def plotCalVisAllBls(uv,datdir,jd=2459855,tmin=0,tmax=600,jd_label=False,savefig
         else:
             plt.show()
             plt.close()
+            
+def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,outfig='',write_params=True):
+    """
+    Plots a histogram of baseline lengths, and shows where a particular baseline cut or cuts is.
+    
+    Parameters:
+    ----------
+    uv: UVData
+        UVData object to use for getting antenna set and baseline length information.
+    use_ants: List
+        Set of antennas to select on.
+    freq: Int
+        Frequency in MHz or HZ to calculate baseline cut at.
+    bl_cut: Int or List
+        Baseline cut or list of baseline cuts to make histograms for - should be in units of n lambda.
+    nbins: Int
+        Number of bins to use in histogram.
+    savefig: Boolean
+    outfig: String
+    write_params: Boolean
+    """
+    args = locals()
+    if len(use_ants)>0:
+        uv.select(use_ants=use_ants)
+    baseline_groups, vec_bin_centers, lengths = uv.get_redundancies(
+        use_antpos=False, include_autos=False
+    )
+    antpairs, lengths = plots.unpackBlLengths(uv, baseline_groups,lengths)
+    if type(bl_cut)==int:
+        ncuts=1
+        bl_cut = [bl_cut]
+    else:
+        ncuts = len(bl_cut)
+    if freq < 1000:
+        freq = freq*1e6
+    wl = scipy.constants.speed_of_light/freq
+    bl_cut_m=np.asarray(bl_cut)*wl
+    for i,cut in enumerate(bl_cut):
+        print(f'Baseline cut of {cut} lambda is at {np.round(bl_cut_m[i],1)} meters at {int(freq*1e-6)}MHz')
+    
+    fig = plt.figure(figsize=(8,6))
+    plt.hist(lengths,bins=nbins,histtype='step')
+    plt.xlabel('Baseline Length(m)')
+    plt.ylabel('Count')
+    plt.xlim((0,max(lengths)+20))
+    colors=['black','red','cyan','green','gold']
+    for i,cut in enumerate(bl_cut_m):
+        plt.axvline(cut,linestyle='--',label=f'{np.round(bl_cut[i],1)} lambda cut',color=colors[i])
+    plt.legend()
+    if savefig:
+        plt.savefig(outfig)
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_func,curr_file,githash)
+            
+def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,outfig='',
+                             write_params=True,suptitle=''):
+    """
+    Plots a histogram of the number of baselines each antenna has that survive a certain baseline cut or cuts.
+    
+    Parameters:
+    -----------
+    uv: UVData
+        UVData object to use for getting antenna set and baseline length information
+    use_ants: List
+        Set of antennas to select on.
+    freq: Int
+        Frequency in MHz or HZ to calculate baseline cut at
+    bl_cut: Int or List
+        Baseline cut or list of baseline cuts to make histograms for - should be in units of n lambda.
+    nbins: Int
+        Number of bins to use in histogram
+    savefig: Boolean
+    Outfig: String
+    write_params: Boolean
+    suptitle: String
+    """
+    args = locals()
+    if len(use_ants)>0:
+        uv.select(use_ants=use_ants)
+    baseline_groups, vec_bin_centers, lengths = uv.get_redundancies(
+        use_antpos=False, include_autos=False
+    )
+    nants = len(uv.get_ants())
+    if type(bl_cut)==int:
+        ncuts=1
+    else:
+        ncuts=len(bl_cut)
+    counts = np.zeros((nants,ncuts))
+    antpairs, lengths = plots.unpackBlLengths(uv, baseline_groups,lengths)
+    if freq < 1000:
+        freq = freq*1e6
+    wl = scipy.constants.speed_of_light/freq
+    bl_cut_m=np.asarray(bl_cut)*wl
+    print(f'Baseline cut of {bl_cut} lambda is {np.round(bl_cut_m,1)} meters at {int(freq*1e-6)}MHz')
+    for i,ant in enumerate(uv.get_ants()):
+        bls = [(bl[0],bl[1]) for bl in antpairs if (bl[0]==ant or bl[1]==ant)]
+        lens = np.asarray(plots.getBaselineLength(uv,bls))
+        if ncuts==1:
+            c = np.count_nonzero(lens>=bl_cut_m)
+            counts[i] = c
+        else:
+            for j,cut in enumerate(bl_cut_m):
+                c = np.count_nonzero(lens>=bl_cut_m[j])
+                counts[i,j] = c
+
+    if ncuts == 1:
+        fig = plt.figure(figsize=(8,6))
+        plt.hist(counts,bins=nbins,histtype='step')
+        plt.xlabel('# Baselines above cut per antenna')
+        plt.ylabel('Count')
+        plt.xlim((0,max(counts)+2))
+    else:
+        ymax = 0
+        for n in range(ncuts):
+            hist, edges = np.histogram(counts[:,n],bins=nbins)
+            if np.max(hist) > ymax:
+                ymax = np.max(hist)
+        ymax = np.round(ymax*1.1,0)
+        fig, ax = plt.subplots(1,ncuts,figsize=(10,4))
+        for i,cut in enumerate(bl_cut_m):
+            ax[i].hist(counts[:,i],bins=nbins,histtype='step')
+#             ax[i].plot(hist)
+            ax[i].set_xlabel('# Baselines above cut per antenna')
+            ax[i].set_ylabel('Count')
+            ax[i].set_xlim((0,np.max(counts)+2))
+            ax[i].set_title(f'{np.round(cut,1)}m/{bl_cut[i]}lambda baseline cut')
+            ax[i].set_ylim((0,ymax))
+    plt.suptitle(suptitle)
+    plt.tight_layout()
+#     plt.axvline(bl_cut_m,linestyle='--',color='k')
+    if savefig:
+        plt.savefig(outfig)
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_func,curr_file,githash)
     
 def get_ind(bls,ant1,ant2):
     ind = -1
