@@ -1,15 +1,19 @@
-PRO run_h4c_vivaldibeam,_Extra=extra
+PRO run_h4c_vivaldibeam_versions,_Extra=extra
   except=!except
   !except=0
   heap_gc
 
+  ; parse command line args
   args = command_line_args(count=nargs)
   print, nargs
+  vis_file_list=args[0]
   print, args[0]
-  print, args[1]  
+  version=args[1]
+  print, args[1]
+  output_directory = args[2]
+  case_name=args[3]
 
   instrument = 'hera'
-  output_directory = args[2]
 
   beam_nfreq_avg=1
   no_frequency_flagging=1
@@ -21,11 +25,9 @@ PRO run_h4c_vivaldibeam,_Extra=extra
   no_png=1
   cleanup=0
   ps_export=0
-  version=args[1]
+  
   psf_dim=28
   image_filter_fn='filter_uv_uniform' ;applied ONLY to output images
-
-  vis_file_list=args[0]
 
   catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
   calibration_catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
@@ -44,8 +46,7 @@ PRO run_h4c_vivaldibeam,_Extra=extra
   no_ps=1 ;don't save postscript copy of images
   gain_factor=0.1
   min_baseline=1.
-  ;min_cal_baseline=25.
-  min_cal_baseline = args[3]
+  min_cal_baseline=25.
   silent=0
   smooth_width=32.
   ;nfreq_avg=16
@@ -68,14 +69,6 @@ PRO run_h4c_vivaldibeam,_Extra=extra
   contour_level=[0,0.01,0.05,0.1,0.2,0.5,0.67,0.9]
   contour_color='blue'
 
-  default_diffuse='D:\MWA\IDL_code\FHD\catalog_data\EoR0_polarized_diffuse_2.sav'
-  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_calibrate') THEN IF extra.diffuse_calibrate EQ 1 THEN $
-    extra=structure_update(extra,diffuse_calibrate=default_diffuse)
-  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_model') THEN IF extra.diffuse_model EQ 1 THEN BEGIN
-    extra=structure_update(extra,diffuse_model=default_diffuse)
-    IF ~(Tag_exist(extra,'model_visibilities') OR (N_Elements(model_visibilities) GT 0)) THEN model_visibilities=1
-  ENDIF
-  undefine_fhd,default_diffuse
   n_pol=2
   restore_vis_savefile=0
   firstpass=1
@@ -86,6 +79,58 @@ PRO run_h4c_vivaldibeam,_Extra=extra
   init_healpix
   fhd_file_list=fhd_path_setup(vis_file_list,version=version,output_directory=output_directory,_Extra=extra)
   healpix_path=fhd_path_setup(output_dir=output_directory,subdir='Healpix',output_filename='Combined_obs',version=version,_Extra=extra)
+  
+  case case_name of
+  
+    'test_versions': begin
+        min_cal_baseline=200
+    end
+    
+    'medResFlaggingOnly_ISO_perSetPhasing_40lambdaCut': begin
+        min_cal_baseline=40
+    end
+    
+    'medResFlaggingOnly_ISO_perSetPhasing_25lambdaCut': begin
+        min_cal_baseline=25
+    end
+    
+    'medResFlaggingOnly_ISO_perSetPhasing_40lambdaCut_gainInit': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_gain_init=10
+    end
+    
+    'incAutos_forEllie': begin
+        min_cal_baseline=25
+        calibration_auto_initialize=1
+    end
+    
+    'incAutos_testAnts': begin
+        min_cal_baseline=25
+        calibration_auto_initialize=1
+    end
+    
+    'excAutos_testAnts': begin
+        min_cal_baseline=25
+        calibration_auto_initialize=1
+    end
+    
+    'testLowerConvThresh': begin
+        min_cal_baseline=25
+        calibration_auto_initialize=1
+        cal_convergence_threshold=1E6
+    end
+
+  endcase
+
+  default_diffuse='D:\MWA\IDL_code\FHD\catalog_data\EoR0_polarized_diffuse_2.sav'
+  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_calibrate') THEN IF extra.diffuse_calibrate EQ 1 THEN $
+    extra=structure_update(extra,diffuse_calibrate=default_diffuse)
+  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_model') THEN IF extra.diffuse_model EQ 1 THEN BEGIN
+    extra=structure_update(extra,diffuse_model=default_diffuse)
+    IF ~(Tag_exist(extra,'model_visibilities') OR (N_Elements(model_visibilities) GT 0)) THEN model_visibilities=1
+  ENDIF
+  undefine_fhd,default_diffuse
 
   IF N_Elements(extra) GT 0 THEN cmd_args=extra
   extra=var_bundle()

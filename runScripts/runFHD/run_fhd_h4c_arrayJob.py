@@ -4,6 +4,7 @@ import argparse
 import os
 import os.path
 from os import path
+import pyuvdata
 from pyuvdata import UVData
 import subprocess
 import yaml
@@ -31,6 +32,7 @@ print(f'Running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
 print(f'githash: {githash}')
+print(f'pyuvdata version: {pyuvdata.__version__}')
 
 overwrite = False
 
@@ -67,6 +69,13 @@ if ind > 0:
         print('%s has already been run - SKIPPING' % version)
     else:
         if args.license == 'NRAO':
-            os.system("idl -e run_h4c_vivaldibeam -args " + filepath + " " + version + " " + args.outdir)
+            print('Calling: idl -e run_h4c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            os.system("idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+        
         elif args.license == 'HERA':
-            os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam -args " + filepath + " " + version + " " + args.outdir)
+            print('Calling: /home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+        
+#         elif args.license == 'versions':
+#             print("Calling: /home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)
+#             os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)

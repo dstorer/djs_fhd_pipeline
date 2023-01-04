@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 
+import SSINS
 from SSINS import SS, INS, version, MF, util
 from SSINS import Catalog_Plot as cp
 from SSINS.data import DATA_PATH
 from functools import reduce
 import numpy as np
 import argparse
+import pyuvdata
 from pyuvdata import UVData, UVFlag
 import yaml
 from hera_mc import cm_hookup
@@ -60,7 +62,9 @@ curr_path = os.path.abspath(__file__)
 print(f'Running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
-print(f'githash: {githash}')
+print(f'djs_fhd_pipeline githash: {githash}')
+print(f'pyuvdata version: {pyuvdata.__version__}')
+print(f'SSINS version: {SSINS.__version__}')
 ncomb = args.n_combine
 
 f = open(args.filename, "r")

@@ -5,14 +5,17 @@ import matplotlib.pyplot as plt
 import plot_fits
 import plot_vis
 import glob
-from pyuvdata import UVData, UVFlag
+import pyuvdata
+from pyuvdata import UVData, UVFlag, UVCal
 import warnings
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import h5py
 import hdf5plugin
 import yaml
+import pickle
 from hera_commissioning_tools import utils
+from scipy.io import readsav
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-r','--raw_files', help='The path to a txt file containing the path to all raw uvfits files to be executed on')
@@ -29,25 +32,33 @@ parser.add_argument('-S','--SSINS', default=0, help='Boolean indicating whether 
 parser.add_argument('-B','--BLS', default=1, help='Boolean indicating whether to write baseline set')
 parser.add_argument('-L','--LSTS', default=0, help='Boolean indicating whether to read and write LST values')
 parser.add_argument('-J','--JDS', default=0, help='Boolean indicating whether to read and write JD values')
+parser.add_argument('-D','--DIRS', default=0, help='Boolean indicating whether to write FHD dirpaths')
+parser.add_argument('-G','--GAINS', default=0, help='Boolean indicating whether to read and write gain values')
+parser.add_argument('-I','--ITER', default=0, help='Boolean indicating whether to read and write convergence iteration numbers.')
+parser.add_argument('-V','--CONV', default=0, help='Boolean indicating whether to read and write convergence values.')
 
 args = parser.parse_args()
 
 polarizations=[-5]
 
 clip_data = False
-startJD = 2459855.63237
-stopJD = 2459855.65308
+# startJD = 2459855.63237
+# stopJD = 2459855.65308
+startJD=0
+stopJD=1385992738279837
 
 freqs = np.arange(845,1090)
 clipFreqs = False
 
 
 # Print out useful metadata
+print('\n')
 curr_path = os.path.abspath(__file__)
 print(f'running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
 print(f'githash: {githash}')
+print(f'pyuvdata version: {pyuvdata.__version__}')
 
 # Open and parse files
 f = open(args.raw_files, "r")
@@ -95,7 +106,15 @@ for i,fhd in enumerate(fhd_files):
     for f in vis_files:
         flist.append(fhd + 'vis_data/' + obsname + '_' + f)
     fhd_file_array.append(flist)
-    
+
+if int(args.DIRS) == 1:
+    print('Writing FHD directory list \n')
+    file = f'{args.outdir}/{args.juliandate}_fhd_dirlist.txt'
+    with open(file, 'wb') as f:
+#         for line in fhd_file_array:
+#             print(line)
+#             f.write(f"{line}\n")
+        pickle.dump(fhd_file_array,f)
             
 print('Reading raw metadata')
 raw_jds = []
@@ -126,15 +145,16 @@ for i,flist in enumerate(fhd_file_array):
         use_ants = calData.get_ants()
 #         bls = np.unique(calData.baseline_array)
         bls = calData.get_antpairs()
-        print('Baselines:')
-        print(bls)
+#         print('Baselines:')
+#         print(bls)
         Nbls = calData.Nbls
         print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
         break
     
 raw = UVData()
 # raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
-raw.read(raw_data)
+# print(raw_data)
+raw.read(raw_data,read_data=False)
 if int(args.JDS) == 1:
     print('Writing JD array')
     jds = raw.time_array
@@ -152,8 +172,8 @@ if int(args.LSTS) == 1:
 #     use_ants = [a for a in raw.get_ants() if a not in xants]
 #     raw.select(antenna_nums=use_ants)
 print('Performing baseline selection on raw data to match baseline set in cal and model data')
-print('Raw baselines:')
-print(raw.get_antpairs())
+# print('Raw baselines:')
+# print(raw.get_antpairs())
 raw.select(bls=bls)
 
 Ntimes = raw.Ntimes
@@ -200,17 +220,46 @@ if int(args.RAW) == 1:
     else:
         rawData.read(raw_data,polarizations=[-5],bls=bls)
     
-    print('Writing Raw Data Array')
+    print('Writing Raw Data Array \n')
     file = f'{args.outdir}/{args.juliandate}_fhd_raw_data.uvfits'
     rawData.write_uvfits(file)
 #     with open(file, 'wb') as f:
 #         np.save(f, raw_array)
-    del raw_array
+#     del raw_array
+    del rawData
+    
+if int(args.GAINS) == 1:
+    print('Reading gains')
+    
+    calfiles = []
+    obsfiles = []
+    layoutfiles = []
+    settingsfiles = []
+    for path in fhd_files:
+        cf = sorted(glob.glob(f'{path}calibration/*cal.sav'))
+        of = sorted(glob.glob(f'{path}metadata/*obs.sav'))
+        lf = sorted(glob.glob(f'{path}metadata/*layout.sav'))
+        sf = sorted(glob.glob(f'{path}metadata/*settings.txt'))
+        try:
+            calfiles.append(cf[0])
+            obsfiles.append(of[0])
+            layoutfiles.append(lf[0])
+            settingsfiles.append(sf[0])
+        except:
+            print(f'Skipping obs {path}')
+            continue
+    
+    g = UVCal()
+    g.read_fhd_cal(cal_file=calfiles,obs_file=obsfiles,layout_file=layoutfiles,settings_file=settingsfiles,
+                run_check=False,run_check_acceptability=False)
+    file = f'{args.outdir}/{args.juliandate}_fhd_gains.uvfits'
+    print('Writing Gains \n')
+    g.write_calfits(file)
 
 if int(args.CAL) == 1:
     print('Reading calibrated data') 
     nobs = int(args.nobs)
-    cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
+#     cal_array = np.ones((Ntimes,Nbls,Nfreqs),dtype=np.cdouble)
 #     fhd_read = False
 #     for i,flist in enumerate(fhd_file_array):
 #         if i%10 == 0:
@@ -245,12 +294,13 @@ if int(args.CAL) == 1:
     calData = UVData()
     calData.read(fhd_file_array,use_model=False,ignore_name=True)
     calData.select(polarizations=[-5])
-    print('Writing Calibrated Data Array')
+    print('Writing Calibrated Data Array \n')
     file = f'{args.outdir}/{args.juliandate}_fhd_calibrated_data.uvfits'
     calData.write_uvfits(file)
 #     with open(file,'wb') as f:
 #         np.save(f, cal_array)
-    del cal_array
+#     del cal_array
+    del calData
 
 if int(args.MODEL) == 1:
     print('Reading model data') 
@@ -275,12 +325,13 @@ if int(args.MODEL) == 1:
     calData = UVData()
     calData.read(fhd_file_array,use_model=True,ignore_name=True)
     calData.select(polarizations=[-5])
-    print('Writing model Data Array')
+    print('Writing model Data Array \n')
     file = f'{args.outdir}/{args.juliandate}_fhd_model_data.uvfits'
     calData.write_uvfits(file)
 #     with open(file, 'wb') as f:
 #         np.save(f, cal_array)
-    del cal_array
+#     del cal_array
+    del calData
 
 
 if int(args.SSINS) == 1:

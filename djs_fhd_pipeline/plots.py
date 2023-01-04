@@ -10,7 +10,166 @@ from hera_commissioning_tools import utils
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
-curr_file = os.path.dirname(os.path.abspath(__file__))
+curr_file = __file__
+
+def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
+                    gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
+                   savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
+                   jd=2459855,readOnly=False,NblsPlot='all',sortBy='blLength'):
+    from pyuvdata import UVCal
+    args = locals()
+    
+    if uvc is None:
+        dirlist = f'{datadir}/{jd}_fhd_dirpaths.txt'
+        calfiles, obsfiles, layoutfiles, settingsfiles = getFhdGainDirs(dirlist)
+        uvc = UVCal()
+        uvc.read_fhd_cal(calfiles, obsfiles,layoutfiles,settingsfiles)
+        uvc.file_name = dirlist
+    else:
+        dirlist=None
+    if raw is None:
+        raw = UVData()
+        raw_file = f'{datadir}/{jd}_fhd_raw_data.uvfits'
+        raw.read(raw_file)
+        raw.file_name = raw_file
+    else:
+        raw_file=None
+    if cal is None:
+        cal = UVData()
+        cal_file = f'{datadir}/{jd}_fhd_calibrated_data.uvfits'
+        cal.read(cal_file)
+        cal.file_name = cal_file
+    else:
+        cal_file=None
+    if model is None:
+        model = UVData()
+        model_file = f'{datadir}/{jd}_fhd_model_data.uvfits'
+        model.read(model_file)
+        model.file_name=model_file
+    else:
+        model_file=None
+    
+    freqs = raw.freq_array[0]*1e-6
+    lstsRaw = raw.lst_array * 3.819719
+    lstsRaw = np.reshape(lstsRaw,(raw.Ntimes,-1))[:,0]
+    lstsFHD = uvc.lst_array * 3.819719
+    lstsFHD = np.reshape(lstsFHD,(uvc.Ntimes,-1))[:,0]
+    
+    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 5)]
+    xticklabels = [int(freqs[x]) for x in xticks]
+    yticksRaw = [int(i) for i in np.linspace(0, len(lstsRaw) - 1, 6)]
+    yticklabelsRaw = [np.around(lstsRaw[ytick], 1) for ytick in yticksRaw]
+    yticksFHD = [int(i) for i in np.linspace(0, len(lstsFHD) - 1, 6)]
+    yticklabelsFHD = [np.around(lstsFHD[ytick], 1) for ytick in yticksFHD]
+    
+    allbls = np.asarray(np.load(f'{datadir}/{jd}_bl_array.npy'))
+    if NblsPlot != 'all':
+        allbls = allbls[0:NblsPlot]   
+    alllengths = np.asarray(getBaselineLength(raw,allbls))
+    if sortBy == 'blLength':
+        leninds = alllengths.argsort()
+        alllengths = alllengths[leninds]
+        allbls = allbls[leninds]
+    nbls = len(allbls)
+    nplots = nbls//nsplit+1
+    for n in range(nplots):
+        if readOnly:
+            continue
+        bls = allbls[n*nsplit:n*nsplit+nsplit]
+        axes = np.empty((len(bls),5),dtype=object)
+        fig = plt.figure(figsize=(16,4*nsplit))
+        gs = fig.add_gridspec(nsplit,5,width_ratios=[1,1,1,1,1])
+        lengths = getBaselineLength(raw,bls)
+        maxlength = np.max(lengths)
+        for b,bl in enumerate(bls):
+            if bl[0]==183 and bl[1]==183:
+                continue
+            g0 = uvc.get_gains(bl[0])
+            g1 = uvc.get_gains(bl[1])
+            g0 = np.transpose(gainNorm(g0[:,:,0]))
+            g1 = np.transpose(gainNorm(g1[:,:,0]))
+            gains = [g0,g1]
+            axinds = [0,4]
+            for i in [0,1]:
+                if gainNorm == np.angle:
+                    vmin = -np.pi
+                    vmax = np.pi
+                    cmap = 'twilight'
+                else:
+                    vmin = np.percentile(gains[i],10)
+                    vmax = np.percentile(gains[i],90)
+                    cmap = 'viridis'
+                ax = fig.add_subplot(gs[b,axinds[i]])
+                axes[b,axinds[i]] = ax
+                im = ax.imshow(gains[i],aspect='auto',cmap=cmap,vmin=vmin,vmax=vmax,
+                                 interpolation='nearest')
+                ax.set_title(f'ant {bl[i]}',fontsize=14)
+            times = np.unique(cal.time_array)
+            raw.select(times=times)
+            r = rawNorm(raw.get_data((bl[0],bl[1],-5)))
+            c = calNorm(cal.get_data((bl[0],bl[1],-5)))
+            m = modelNorm(model.get_data((bl[0],bl[1],-5)))
+            norms = [rawNorm,calNorm,modelNorm]
+            dats = [r,c,m]
+            for i in [0,1,2]:
+                ax = fig.add_subplot(gs[b,i+1])
+                axes[b,i+1] = ax
+                norm = norms[i]
+                if norm == np.angle:
+                    vmin = -np.pi
+                    vmax = np.pi
+                    cmap = 'twilight'
+                else:
+                    vmin = np.percentile(dats[i],10)
+                    vmax = np.percentile(dats[i],90)
+                    cmap = 'viridis'
+                im = ax.imshow(dats[i],aspect='auto',interpolation='nearest',vmin=vmin,vmax=vmax,cmap=cmap)
+        
+        for i in range(np.shape(axes)[0]):
+            for j in range(np.shape(axes)[1]):
+                ax = axes[i,j]
+                ax.set_xticks(xticks)
+                ax.set_xticklabels(xticklabels)
+                a1 = bls[i][0]
+                a2 = bls[i][1]
+                plotnames = [f'ant {a1} gain - {gainNorm.__name__}',
+                     f'raw vis - {rawNorm.__name__}',
+                     f'cal vis - {calNorm.__name__}',
+                     f'model vis - {modelNorm.__name__}',
+                     f'ant {a2} gain - {gainNorm.__name__}']
+                if j==0 or j==4:
+                    ax.set_yticks(yticksFHD)
+                    ax.set_yticklabels(yticklabelsFHD)
+                else:
+                    ax.set_yticks(yticksRaw)
+                    ax.set_yticklabels(yticklabelsRaw)
+                if i==(np.shape(axes)[0]-1):
+                    ax.set_xlabel('Freq (MHz)')
+                if j==0:
+                    ax.set_ylabel(f'({a1}, {a2})\n LST',fontsize=16)
+                if i==0:
+                    ax.set_title(plotnames[j],fontsize=14)
+        avgLen = int(np.mean(lengths))
+        plt.suptitle(f'Avg Length this panel: {avgLen} meters',fontsize=18)
+#         plt.subplots_adjust(top=0.65)
+        plt.tight_layout(rect=[0, 0, 1, 0.98])
+        if savefig is True:
+            if sortBy == 'blLength':
+                outname = f'{outfig}_sortBy{sortBy}_{str(avgLen).zfill(3)}m_{str(n).zfill(2)}.{file_ext}'
+            else:
+                outname = f'{outfig}_sortBy{sortBy}_{str(n).zfill(2)}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_func=curr_func,curr_file=curr_file,githash=githash,dirlist=dirlist,
+                                          raw_file=raw_file,cal_file=cal_file,model_file=model_file,
+                                          gains=uvc,raw=raw,calibrated=cal,model=model)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+            
+    return uvc, raw, cal, model
 
 def plotCalVisAllBls(uv,datdir,jd=2459855,tmin=0,tmax=600,jd_label=False,savefig=False,outfig='',write_params=True,
                     split_plots=True,nsplit=3,file_ext='pdf',norm='abs'):
@@ -310,3 +469,29 @@ def getBaselineLength(uv,bls):
         ind = get_ind(antpairs,bls[0],bls[1])
         lens = lengths[ind]
     return lens
+
+def getFhdGainDirs(dirlist):
+    import glob
+    
+    d = open(dirlist,'r')
+    dirlist = d.read().split('\n')[0:-1]
+
+    calfiles = []
+    obsfiles = []
+    layoutfiles = []
+    settingsfiles = []
+    for path in dirlist:
+        cf = sorted(glob.glob(f'{path}calibration/*cal.sav'))
+    #     print(cf)
+        of = sorted(glob.glob(f'{path}metadata/*obs.sav'))
+        lf = sorted(glob.glob(f'{path}metadata/*layout.sav'))
+        sf = sorted(glob.glob(f'{path}metadata/*settings.txt'))
+        try:
+            calfiles.append(cf[0])
+            obsfiles.append(of[0])
+            layoutfiles.append(lf[0])
+            settingsfiles.append(sf[0])
+        except:
+            print(f'Skipping obs {path}')
+            continue
+    return calfiles, obsfiles,layoutfiles,settingsfiles

@@ -4,6 +4,7 @@ import argparse
 import os
 import os.path
 from os import path
+import pyuvdata
 from pyuvdata import UVData
 import subprocess
 import yaml
@@ -26,6 +27,7 @@ print(f'Running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
 print(f'githash: {githash}')
+print(f'pyuvdata version: {pyuvdata.__version__}')
 
 overwrite = False
 

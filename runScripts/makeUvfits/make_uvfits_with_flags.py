@@ -1,4 +1,5 @@
 import numpy as np
+import pyuvdata
 from pyuvdata import UVData, UVFlag, utils
 import argparse
 import os
@@ -41,6 +42,8 @@ print(f'running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
 print(f'githash: {githash}')
+print(f'pyuvdata version: {pyuvdata.__version__}')
+print(f'numpy version: {np.__version__}')
 
 if not os.path.exists(args.outdir):
     os.makedirs(args.outdir)
