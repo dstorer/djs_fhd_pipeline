@@ -8,6 +8,7 @@ echo "ssins_files: ${ssins_files}"
 echo "outdir: ${outdir}"
 echo "exants: ${exants}"
 echo "JD: ${jd}"
+echo "pol: ${pol}"
 
 echo " "
 echo "Data to read and write:"
@@ -20,8 +21,10 @@ echo "BLS: ${BLS}"
 echo "LSTS: ${LSTS}"
 echo "GAINS: ${GAINS}"
 echo "DIRS: ${DIRS}"
+echo "ITER: ${ITER}"
+echo "CONV: ${CONV}"
 
-python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/read_and_write_data.py -r ${raw_files} -f ${fhd_files} -s ${ssins_files} -o ${outdir} -x ${exants} -j ${jd} -R ${RAW} -S ${SSINS} -C ${CAL} -M ${MODEL} -J ${JDS} -B ${BLS} -L ${LSTS} -G ${GAINS} -D ${DIRS}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/read_and_write_data.py -r ${raw_files} -f ${fhd_files} -s ${ssins_files} -o ${outdir} -x ${exants} -j ${jd} -p ${pol} -R ${RAW} -S ${SSINS} -C ${CAL} -M ${MODEL} -J ${JDS} -B ${BLS} -L ${LSTS} -G ${GAINS} -D ${DIRS} -I ${ITER} -V ${CONV}
 
 echo "JOB INFO"
 squeue -j $SLURM_JOBID

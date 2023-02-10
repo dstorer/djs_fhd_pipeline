@@ -47,6 +47,8 @@ parser.add_argument("-n", "--n_combine", type=int, default=10,
                     help="The number of files to combine when running SSINS and calculating flags")
 parser.add_argument("-i", "--node", default='all',
                     help="If not all, node number to exclusively use for flagging")
+parser.add_argument("-j", "--ind", default=0,
+                    help="Array job index")
 args = parser.parse_args()
 
 print(args.no_diff)
@@ -70,163 +72,148 @@ ncomb = args.n_combine
 f = open(args.filename, "r")
 file_names = f.read().split('\n')
 
-for i,f1 in enumerate(file_names[::ncomb]):
-    if i*ncomb+ncomb >= len(file_names):
-        print('Done')
-        break
-    print(f'Running on {f1}')
-    name = f1.split('/')[-1][0:-5]
-    prefix = f'{args.prefix}/{name}'
+# for i,f1 in enumerate(file_names[::ncomb]):
+i = int(args.ind)
+# i = i*ncomb
+f1 = file_names[i*ncomb]
+
+if i*ncomb+ncomb >= len(file_names):
+    print('Done')
+    raise Exception("Index exceeds number of available files")
+print(f'Running on {f1}')
+name = f1.split('/')[-1][0:-5]
+prefix = f'{args.prefix}/{name}'
 #     print(f'Prefix: {prefix}')
 
-    version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
-    version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
+version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
+version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
 
-    # Make the uvflag object for storing flags later, and grab bls for partial I/O
-    uvd = UVData()
-    curr_set = file_names[i*ncomb:i*ncomb+ncomb]
-    print(f'reading files: {curr_set}')
-    uvd.read(curr_set, read_data=False)
+# Make the uvflag object for storing flags later, and grab bls for partial I/O
+uvd = UVData()
+curr_set = file_names[i*ncomb:i*ncomb+ncomb]
+print(f'reading files: {curr_set}')
+uvd.read(curr_set, read_data=False)
 
-    # Exclude flagged antennas
-    with open(args.xants, 'r') as xfile:
-        xants = yaml.safe_load(xfile)
-    use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
-    uvd.select(antenna_nums=use_ants)
-    
-    x = cm_hookup.get_hookup('default')
-    if args.internode_only==1 or args.intersnap_only==1 or args.node != 'all':
-        if args.internode_only == 1 and args.node != 'all':
-            raise Exception('internode_only must be disabled when node is specified')
-        if i==0:
-            int_bls = []
-            snap_bls = []
-            node_bls = []
-            for a1 in use_ants:
-                known_bad=False
-                for a2 in use_ants:
-                    if a1<a2:
-                        key1 = com_utils.get_ant_key(x,a1)
-                        key2 = com_utils.get_ant_key(x,a2)
-                        try:
-                            n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
-                            s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                            n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
-                            s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
-                            if n1 != n2:
-                                int_bls.append((a1,a2))
-                                snap_bls.append((a1,a2))
-                            elif n1==n2 and s1!=s2:
-                                snap_bls.append((a1,a2))
-                            if n1 == args.node and n2 == args.node:
-                                if args.intersnap_only == 1 and s1!=s2:
-                                    node_bls.append((a1,a2))
-                                elif args.intersnap_only == 0:
-                                    node_bls.append((a1,a2))
-                        except:
-                            if known_bad is True:
-                                print(f'ERROR - One of {key1} or {key2} not found in database!')
-                                known_bad = True
-                            continue
-        if args.internode_only==1:
-            print('###### Excluding all intranode baselines ######')
-            uvd.select(bls=int_bls)
-        elif args.intersnap_only==1:
+# Exclude flagged antennas
+with open(args.xants, 'r') as xfile:
+    xants = yaml.safe_load(xfile)
+use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
+uvd.select(antenna_nums=use_ants)
+
+x = cm_hookup.get_hookup('default')
+if args.internode_only==1 or args.intersnap_only==1 or args.node != 'all':
+    if args.internode_only == 1 and args.node != 'all':
+        raise Exception('internode_only must be disabled when node is specified')
+#     if i==0:
+    int_bls = []
+    snap_bls = []
+    node_bls = []
+    for a1 in use_ants:
+        known_bad=False
+        for a2 in use_ants:
+            if a1<a2:
+                key1 = com_utils.get_ant_key(x,a1)
+                key2 = com_utils.get_ant_key(x,a2)
+                try:
+                    n1 = x[key1].get_part_from_type('node')[f'N<ground'][1:]
+                    s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                    n2 = x[key2].get_part_from_type('node')[f'N<ground'][1:]
+                    s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
+                    if n1 != n2:
+                        int_bls.append((a1,a2))
+                        snap_bls.append((a1,a2))
+                    elif n1==n2 and s1!=s2:
+                        snap_bls.append((a1,a2))
+                    if n1 == args.node and n2 == args.node:
+                        if args.intersnap_only == 1 and s1!=s2:
+                            node_bls.append((a1,a2))
+                        elif args.intersnap_only == 0:
+                            node_bls.append((a1,a2))
+                except:
+                    if known_bad is True:
+                        print(f'ERROR - One of {key1} or {key2} not found in database!')
+                        known_bad = True
+                    continue
+    if args.internode_only==1:
+        print('###### Excluding all intranode baselines ######')
+        uvd.select(bls=int_bls)
+    elif args.intersnap_only==1:
+        print('###### Excluding all intrasnap baselines ######')
+        uvd.select(bls=snap_bls)
+    elif args.node != 'all':
+        print(f'###### Selecting antennas in node {args.node}')
+        if args.intersnap_only==1:
             print('###### Excluding all intrasnap baselines ######')
-            uvd.select(bls=snap_bls)
-        elif args.node != 'all':
-            print(f'###### Selecting antennas in node {args.node}')
-            if args.intersnap_only==1:
-                print('###### Excluding all intrasnap baselines ######')
-            uvd.select(bls=node_bls)
-#     if args.node != 'all':
-#         if args.internode_only==1:
-#             raise Exception('Cannot select internode baselines when node is also specified')
-#         if i==0:
-#             use_bls = []
-#             for a1 in 
-#     elif args.intersnap_only == 1:
-#         if i==0:
-#             print('###### Excluding all intrasnap baselines ######')
-#             snap_bls = []
-#             for a1 in use_ants:
-#                 for a2 in use_ants:
-#                     h = cm_hookup.Hookup()
-#                     x = h.get_hookup('HH')
-#                     key1 = 'HH%i:A' % (a1)
-#                     s1 = x[key1].hookup[f'N<ground'][-1].downstream_input_port[-1]
-#                     key2 = 'HH%i:A' % (a2)
-#                     s2 = x[key2].hookup[f'N<ground'][-1].downstream_input_port[-1]
-#                     if s1 != s2:
-#                         snap_bls.append((a1,a2))
-#         uvd.select(bls=snap_bls)
+        uvd.select(bls=node_bls)
 
-    bls = uvd.get_antpairs()
-    uvf = UVFlag(uvd, waterfall=True, mode='flag')
-    del uvd
+bls = uvd.get_antpairs()
+uvf = UVFlag(uvd, waterfall=True, mode='flag')
+del uvd
 
-    # Make the SS object
-    ss = SS()
-    if args.num_baselines > 0:
-        ss.read(file_names[i*ncomb:i*ncomb+ncomb], bls=bls[:args.num_baselines],
+# Make the SS object
+ss = SS()
+if args.num_baselines > 0:
+    ss.read(file_names[i*ncomb:i*ncomb+ncomb], bls=bls[:args.num_baselines],
+            diff=args.no_diff)
+    ins = INS(ss)
+    Nbls = len(bls)
+    for slice_ind in range(args.num_baselines, Nbls, args.num_baselines):
+        ss = SS()
+        ss.read(file_names[i*ncomb:i*ncomb+ncomb], bls=bls[slice_ind:slice_ind + args.num_baselines],
                 diff=args.no_diff)
-        ins = INS(ss)
-        Nbls = len(bls)
-        for slice_ind in range(args.num_baselines, Nbls, args.num_baselines):
-            ss = SS()
-            ss.read(file_names[i*ncomb:i*ncomb+ncomb], bls=bls[slice_ind:slice_ind + args.num_baselines],
-                    diff=args.no_diff)
-            new_ins = INS(ss)
-            ins = util.combine_ins(ins, new_ins)
-    else:
-        ss.read(file_names[i*ncomb:i*ncomb+ncomb], diff=args.no_diff, antenna_nums=use_ants)
-        if args.internode_only == 1:
-            ss.select(bls=int_bls)
-        elif args.intersnap_only == 1:
-            ss.select(bls=snap_bls)
+        new_ins = INS(ss)
+        ins = util.combine_ins(ins, new_ins)
+else:
+    ss.read(file_names[i*ncomb:i*ncomb+ncomb], diff=args.no_diff, antenna_nums=use_ants)
+    if args.internode_only == 1:
+        ss.select(bls=int_bls)
+    elif args.intersnap_only == 1:
+        ss.select(bls=snap_bls)
 #         ss.read(file_names[i:i+ncomb], diff=args.no_diff, ant_str='cross')
-        ss.select(ant_str='cross')
-        
-        ins = INS(ss)
+    ss.select(ant_str='cross')
 
-    # Clear some memory??
-    del ss
+    ins = INS(ss)
 
-    # Write the raw data and z-scores to h5 format
-    ins.write(prefix, sep='.', clobber=clobber)
-    ins.write(prefix, output_type='z_score', sep='.', clobber=clobber)
+# Clear some memory??
+del ss
 
-    # Write out plots
-    cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+# Write the raw data and z-scores to h5 format
+ins.write(prefix, sep='.', clobber=clobber)
+ins.write(prefix, output_type='z_score', sep='.', clobber=clobber)
+
+# Write out plots
+cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 #     ins.write(prefix)
 #     ins.write(prefix, output_type='z_score')
 
-    # Flag FM radio
-    where_FM = np.where(np.logical_and(ins.freq_array > 87.5e6, ins.freq_array < 108e6))
-    ins.metric_array[:, where_FM] = np.ma.masked
-    ins.metric_ms = ins.mean_subtract()
-    ins.history += "Manually flagged the FM band. "
+# Flag FM radio
+where_FM = np.where(np.logical_and(ins.freq_array > 87.5e6, ins.freq_array < 108e6))
+ins.metric_array[:, where_FM] = np.ma.masked
+ins.metric_ms = ins.mean_subtract()
+ins.history += "Manually flagged the FM band. "
 
-    # Make a filter with specified settings
-    with open(args.shape_dict, 'r') as shape_file:
-        shape_dict = yaml.safe_load(shape_file)
+# Make a filter with specified settings
+with open(args.shape_dict, 'r') as shape_file:
+    shape_dict = yaml.safe_load(shape_file)
 
-    sig_thresh = {shape: args.other_sig for shape in shape_dict}
-    sig_thresh['narrow'] = args.other_sig
-    sig_thresh['streak'] = args.streak_sig
-    mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggro)
+sig_thresh = {shape: args.other_sig for shape in shape_dict}
+sig_thresh['narrow'] = args.other_sig
+sig_thresh['streak'] = args.streak_sig
+mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggro)
 
-    # Do flagging
-    mf.apply_match_test(ins, time_broadcast=True)
-    ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
+# Do flagging
+mf.apply_match_test(ins, time_broadcast=True)
+ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
 
-    cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 
-    # Write outputs
+# Write outputs
 #     ins.write(prefix, output_type='flags', uvf=uvf)
-    ins.write(prefix, output_type='mask', sep='.', clobber=clobber)
-    uvf.history += ins.history
-    # "flags" are not helpful if no differencing was done
-    if args.no_diff:
-        ins.write(prefix, output_type='flags', sep='.', uvf=uvf, clobber=clobber)
-    ins.write(prefix, output_type='match_events', sep='.', clobber=clobber)
+ins.write(prefix, output_type='mask', sep='.', clobber=clobber)
+uvf.history += ins.history
+# "flags" are not helpful if no differencing was done
+if args.no_diff:
+    ins.write(prefix, output_type='flags', sep='.', uvf=uvf, clobber=clobber)
+ins.write(prefix, output_type='match_events', sep='.', clobber=clobber)
+
+print('FINISHED FLAGGING!')

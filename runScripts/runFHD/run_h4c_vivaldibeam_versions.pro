@@ -117,20 +117,92 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
     
     'testLowerConvThresh': begin
         min_cal_baseline=25
-        calibration_auto_initialize=1
-        cal_convergence_threshold=1E6
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+    end
+    
+    'lowerConvThresh_minCal25': begin
+        min_cal_baseline=25
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+    end
+    
+    'lowerConvThresh_minCal40': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+    end
+    
+    'lowerConvThresh_minCal40_higherPhaseFitIter': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+        phase_fit_iter=16
+    end
+    
+    'lowerConvThresh_minCal40_higherPhaseIter': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+        phase_iter=16
+    end
+    
+    'calGainInit200': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_gain_init=200.
+        cal_convergence_threshold=1E-6
+        phase_iter=16
+    end
+    
+    'calPolyfitOn_deg1': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+        phase_iter=16
+        calibration_polyfit=1
+        cal_phase_degree_fit=1
+    end
+    
+    'calPolyfitOn_deg2': begin
+        min_cal_baseline=40
+        calibration_auto_initialize=0
+        cal_convergence_threshold=1E-6
+        phase_iter=16
+        calibration_polyfit=1
+        cal_phase_degree_fit=2
+    end
+    
+    'mediumRestrictive_intersnap_caltimeaverage1': begin
+        cal_time_average=1
+    end
+    
+    'medRes_IS_startFromPrevGains': begin
+        cal_time_average=1
+        start_gain_file = '/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/fhdOutput/mediumRestrictive_intersnapOnly/fhd_2459855.6033653542_mediumRestrictive_intersnap_caltimeaverage1_mid_3/calibration/zen.2459855.6033653547_mid_10obs_1_cal.sav'
+        cal=getvar_savefile(start_gain_file,'cal')
+        gain_arr_ptr=cal.gain
+    end
+    
+    'medRes_IS_startFromGains1': begin
+        cal_time_average=1
+    end
+    
+    'medRes_IS_useInitialCalibration': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/fhdOutput/mediumRestrictive_intersnapOnly/fhd_2459855.6033653542_mediumRestrictive_intersnap_caltimeaverage1_mid_3/calibration/zen.2459855.6033653547_mid_10obs_1_cal.sav'
     end
 
   endcase
 
-  default_diffuse='D:\MWA\IDL_code\FHD\catalog_data\EoR0_polarized_diffuse_2.sav'
-  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_calibrate') THEN IF extra.diffuse_calibrate EQ 1 THEN $
-    extra=structure_update(extra,diffuse_calibrate=default_diffuse)
-  IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_model') THEN IF extra.diffuse_model EQ 1 THEN BEGIN
-    extra=structure_update(extra,diffuse_model=default_diffuse)
-    IF ~(Tag_exist(extra,'model_visibilities') OR (N_Elements(model_visibilities) GT 0)) THEN model_visibilities=1
-  ENDIF
-  undefine_fhd,default_diffuse
+  ;default_diffuse='D:\MWA\IDL_code\FHD\catalog_data\EoR0_polarized_diffuse_2.sav'
+  ;IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_calibrate') THEN IF extra.diffuse_calibrate EQ 1 THEN $
+  ;  extra=structure_update(extra,diffuse_calibrate=default_diffuse)
+  ;IF N_Elements(extra) GT 0 THEN IF Tag_exist(extra,'diffuse_model') THEN IF extra.diffuse_model EQ 1 THEN BEGIN
+  ;  extra=structure_update(extra,diffuse_model=default_diffuse)
+  ;  IF ~(Tag_exist(extra,'model_visibilities') OR (N_Elements(model_visibilities) GT 0)) THEN model_visibilities=1
+  ;ENDIF
+  ;undefine_fhd,default_diffuse
 
   IF N_Elements(extra) GT 0 THEN cmd_args=extra
   extra=var_bundle()
