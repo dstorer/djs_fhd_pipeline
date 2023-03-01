@@ -147,31 +147,31 @@ if clip_data is True:
     raw_data = raw_data[startind:stopind]
 mid_jd = raw_jds[len(raw_jds)//2]
 
-if int(args.BLS) == 1:
-    file_read = False
-    for i,flist in enumerate(fhd_file_array):
-        if obs[i] == 0:
-            continue
-        if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
-            continue
-        if file_read is False:
-            calData = UVData()
-            print(flist)
-            calData.read(flist,use_model=False)
-            calData.select(polarizations=pol)
-            use_ants = calData.get_ants()
-    #         bls = np.unique(calData.baseline_array)
-            bls = calData.get_antpairs()
-    #         print('Baselines:')
-    #         print(bls)
-            Nbls = calData.Nbls
-            print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
-            break
+
+file_read = False
+for i,flist in enumerate(fhd_file_array):
+    if obs[i] == 0:
+        continue
+    if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
+        continue
+    if file_read is False:
+        calData = UVData()
+        print(flist)
+        calData.read(flist,use_model=False)
+        calData.select(polarizations=pol)
+        use_ants = calData.get_ants()
+#         bls = np.unique(calData.baseline_array)
+        bls = calData.get_antpairs()
+#             print('Baselines:')
+#             print(bls)
+        Nbls = calData.Nbls
+        print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
+        break
     
 raw = UVData()
 # raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
 # print(raw_data)
-raw.read(raw_data,read_data=False)
+raw.read(raw_data,read_data=False,ignore_name=True)
 if int(args.JDS) == 1:
     print('Writing JD array')
     jds = raw.time_array

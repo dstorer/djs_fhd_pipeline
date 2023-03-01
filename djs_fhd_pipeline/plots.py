@@ -15,6 +15,46 @@ githash = utils.get_git_revision_hash(dirpath)
 curr_file = __file__
 
 import json
+
+def plotBaselineMap(uv,bls='withData'):
+    allbls = []
+    if bls=='withData':
+        allants = uv.get_ants()
+    elif bls=='all':
+        allants = uv.antenna_numbers
+    for a1 in allants:
+        for a2 in allants:
+            if a2>=a1:
+                if bls=='withData':
+                    try:
+                        _ = uv.get_data(a1,a2)
+                        allbls.append((a1,a2))
+                    except:
+                        continue
+                elif bls=='all':
+                    allbls.append((a1,a2))
+    allbls = np.asarray(allbls)
+    print(len(allbls))
+    allangs = []
+    alldisps = []
+    pos = uv.antenna_positions + uv.telescope_location
+    pos = pyutils.ENU_from_ECEF(pos, *uv.telescope_location_lat_lon_alt)
+    for bl in allbls:
+        p1 = pos[np.argwhere(uv.antenna_numbers == bl[0])]
+        p2 = pos[np.argwhere(uv.antenna_numbers == bl[1])]
+        disp = (p2 - p1)[0][0][0:2]
+        alldisps.append(disp)
+        allangs.append(np.arctan(disp[1]/disp[0])*57.2958)
+    allangs = np.asarray(allangs)
+    alldisps = np.asarray(alldisps)
+    fig = plt.figure(figsize=(10,10))
+    for b,bl in enumerate(allbls):
+        plt.scatter(alldisps[b][0],alldisps[b][1],color='blue')
+    plt.xlabel('EW Separation (m)')
+    plt.ylabel('NS Separation (m)')
+    plt.title('HERA Baseline Map')
+
+
 def plotGainsAndConv(datadir, uvc = None, raw = None, cal = None, model = None,
                     gainNorm=np.abs,rawNorm=np.abs,
                    savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
