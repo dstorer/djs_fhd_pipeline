@@ -17,57 +17,234 @@ curr_file = __file__
 
 import json
 
-
-def plotVisAndDelay(datadir, calFull = None, rawFull = None, modelFull = None, gainsFull = None,
-                    gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
-                   savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
-                   jd=2459855,readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90,
-                   extraCal=False,cal2=None,lstRange=[],ytick_unit='lst',incGains=False,fringe=False,
-                   multiplyGains=False,useFtWindow=False,normDs=False,dsLogScale=True,delayRange=None):
-    from uvtools import dspec
-    args = locals()
-    
-    dirlist=None
-    if rawFull is None:
+def readFiles(datadir, raw=None, cal=None, model=None, gains=None, extraCal=None, incGains=True):
+    if raw is None:
         print('Reading raw')
-        rawFull = UVData()
+        raw = UVData()
         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
-        rawFull.read(raw_file)
-        rawFull.file_name = raw_file
+        raw.read(raw_file)
+        raw.file_name = raw_file
     else:
         raw_file=None
-    if calFull is None:
+    if cal is None:
         print('Reading cal')
-        calFull = UVData()
+        cal = UVData()
         cal_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}.uvfits'
-        calFull.read(cal_file)
-        calFull.file_name = cal_file
+        cal.read(cal_file)
+        cal.file_name = cal_file
     else:
         cal_file=None
     if extraCal is True and cal2 is None:
         print('Reading extraCal')
-        cal2Full = UVData()
+        cal2 = UVData()
         cal2_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}_1.uvfits'
-        cal2Full.read(cal2_file)
-        cal2Full.file_name = cal2_file
+        cal2.read(cal2_file)
+        cal2.file_name = cal2_file
     else:
         cal2_file=None
-    if modelFull is None:
+    if model is None:
         print('Reading model')
-        modelFull = UVData()
+        model = UVData()
         model_file = f'{datadir}/{jd}_fhd_model_data_{pol}.uvfits'
-        modelFull.read(model_file)
-        modelFull.file_name=model_file
+        model.read(model_file)
+        model.file_name=model_file
     else:
         model_file=None
-    if incGains is True and gainsFull is None:
+    if incGains is True and gains is None:
         print('Reading Gains')
-        gainsFull = UVCal()
+        gains = UVCal()
         gains_file = f'{datadir}/{jd}_fhd_gains_{pol}_0.uvfits'
-        gainsFull.read_calfits(gains_file)
-        gainsFull.file_name=gains_file
+        gains.read_calfits(gains_file)
+        gains.file_name=gains_file
     else:
         gains_file=None
+        
+    return raw, cal, model, gains, extraCal
+
+def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, write_params=True):
+    fig = plt.figure(figsize=(8,8))
+    freqs = uv.freq_array[0]
+    wl = scipy.constants.speed_of_light/freqs
+    bls = np.unique(uv.baseline_array)
+    a1s,a2s = pyutils.baseline_to_antnums(bls, uv.Nants_data)
+    antpos = uv.antenna_positions + uv.telescope_location
+    antpos = pyutils.ENU_from_ECEF(antpos, *uv.telescope_location_lat_lon_alt)
+    allants = uv.antenna_numbers
+    blx = []
+    bly = []
+    for i,a1 in enumerate(a1s):
+        for a2 in a2s:
+            a1ind = np.argmin(abs(np.subtract(allants,a1)))
+            a2ind = np.argmin(abs(np.subtract(allants,a2)))
+            a1pos = antpos[a1ind]
+            a2pos = antpos[a2ind]
+            bl = np.subtract(a2pos,a1pos)
+            if freq_synthesis:
+                for w in wl:
+                    blx.append(bl[0]/w)
+                    bly.append(bl[1]/w)
+            else:
+                bl = bl/wl[len(wl)//2]
+                blx.append(bl[0])
+                bly.append(bl[1])
+    plt.scatter(blx,bly,alpha=0.2,c='black',s=1)
+    plt.xlabel('U (wavelengths)')
+    plt.ylabel('V (wavelengths)')
+    plt.title(f'UV Coverage - {len[bls]} total baselines')
+    if savefig:
+            outname = f'{outfig}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                           curr_func=curr_func,githash=githash,nb_path=nb_path)
+            plt.close()
+    else:
+        plt.show()
+        plt.close()
+
+def getCrossesPerAnt(uv,ant):
+    bls = []
+    crossAnts = []
+    for a in uv.get_ants():
+        try:
+            _ = uv.get_data(ant,a)
+            if a != ant:
+                bls.append((ant,a))
+                crossAnts.append(a)
+        except:
+            continue
+    return np.asarray(bls), np.asarray(crossAnts)
+
+def plotPerAntCrossesAll(datadir, jd, raw=None, pol='XX', savefig=False, write_params=True, outfig='',
+                       file_ext='jpeg',NantsPlot='all',nb_path=None, visNorm=np.abs):
+    if raw==None:
+        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw = UVData()
+        raw.read(raw_file)
+    args = locals()
+    ants = raw.get_ants()
+    Nants = len(ants)
+    if NantsPlot == 'all':
+        NantsPlot = Nants
+    nplots = NantsPlot
+    ncols = 6
+    
+    for n in range(nplots):
+        ant = ants[n]
+        bls, crossAnts = getCrossesPerAnt(raw,ant)
+        
+        lengths = np.asarray(getBaselineLength(raw,bls))
+        leninds = lengths.argsort()
+        lengths = lengths[leninds]
+        crossAnts = crossAnts[leninds]
+        
+        nrows = np.ceil(len(crossAnts)/ncols)
+        fig = plt.figure(figsize=(16,24))
+        gs = fig.add_gridspec(int(nrows),int(ncols))
+        for i,b in enumerate(crossAnts):
+            d = visNorm(raw.get_data(ant,b,pol))
+            ax1 = fig.add_subplot(gs[i//ncols,i%ncols])
+            if visNorm == np.angle:
+                vmin = -np.pi
+                vmax = np.pi
+                cmap = 'twilight'
+#                 print(d)
+            else:
+                vmin=np.percentile(d,10)
+                vmax=np.percentile(d,90)
+                cmap = 'viridis'
+            im1 = ax1.imshow(d,aspect='auto',interpolation='nearest',vmin=vmin,vmax=vmax,cmap=cmap)
+            ax1.set_title(f'({ant},{b}) - {int(lengths[i])}m')
+#             plt.colorbar(im1,cax=ax1)
+            if i%ncols==0:
+                ax1.set_ylabel('Time')
+            else:
+                ax1.set_yticks([])
+            ax1.set_xticks([])
+        
+        if savefig:
+            outname = f'{outfig}_{pol}_{ant}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(f'{outfig}_{pol}',args,curr_file=curr_file,curr_func=curr_func,githash=githash,nb_path=nb_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+
+def plotPerAntCrossSums(datadir, jd, raw=None, pol='XX', antsPerPage=4, savefig=False, write_params=True, outfig='',
+                       file_ext='jpeg'):
+    if raw==None:
+        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw = UVData()
+        raw.read(raw_file)
+    args = locals()
+    ants = raw.get_ants()
+    Nants = len(ants)
+    nplots = Nants//antsPerPage
+    for n in range(nplots):
+        fig = plt.figure(figsize=(16,8*antsPerPage))
+        gs = fig.add_gridspec(antsPerPage,2,wspace=0.15,hspace=0.35)
+        alist = ants[n*antsPerPage:n*antsPerPage+antsPerPage]
+        for i,a in enumerate(alist):
+            inc = np.empty((raw.Ntimes,raw.Nfreqs),dtype='complex128')
+            coh = np.empty((raw.Ntimes,raw.Nfreqs),dtype='complex128')
+            for j,c in enumerate(ants):
+                if a==c:
+                    continue
+                try:
+                    d = raw.get_data(a,c,pol)
+                except:
+                    continue
+#                 print(np.shape(d))
+#                 print(raw.Ntimes)
+#                 print(raw.Nfreqs)
+#                 if j==0:
+#                     inc = abs(d)
+#                     coh = d
+#                 else:
+                inc += abs(d)
+                coh += d
+            coh = abs(coh)
+            inc = abs(inc)
+            ax1 = fig.add_subplot(gs[i,0])
+            im1 = ax1.imshow(coh,aspect='auto',interpolation='nearest',vmin=np.percentile(coh,10),vmax=np.percentile(coh,90))
+            plt.colorbar(im1)
+            ax2 = fig.add_subplot(gs[i,1])
+            im2 = ax2.imshow(inc,aspect='auto',interpolation='nearest',vmin=np.percentile(inc,10),vmax=np.percentile(inc,90))
+            plt.colorbar(im2)
+            if i==0:
+                ax1.set_title('abs(sum)')
+                ax2.set_title('sum(abs)')
+            ax1.set_ylabel(f'ant {a}')
+        
+        if savefig:
+            outname = f'{outfig}_{pol}_{str(n).zfill(2)}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_file=curr_file,curr_func=curr_func,githash=githash,nb_path=nb_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+            
+    
+def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = None, gainsFull = None,
+                    gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
+                   savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
+                    readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90,
+                   extraCal=False,cal2=None,lstRange=[],ytick_unit='lst',incGains=False,fringe=False,
+                   multiplyGains=False,useFtWindow=False,normDs=False,dsLogScale=True,delayRange=None,
+                   nb_path=None):
+    from uvtools import dspec
+    args = locals()
+    
+    dirlist=None
+    rawFull, calFull, modelFull, gainsFull, extraCal = readFiles(datadir,rawFull,calFull,modelFull,gainsFull,extraCal=extraCal,
+                                                incGains=incGains)
     
     if incGains:
         times = np.unique(gainsFull.time_array)
@@ -410,7 +587,8 @@ def plotVisAndDelay(datadir, calFull = None, rawFull = None, modelFull = None, g
                 curr_func = inspect.stack()[0][3]
                 utils.write_params_to_text(outfig,args,dirlist=dirlist,curr_file=curr_file,curr_func=curr_func,githash=githash,
                                           raw_file=raw_file,cal_file=cal_file,model_file=model_file,
-                                           raw=raw,calibrated=cal,model=model,djs_fhd_pipeline_githash=githash)
+                                           raw=raw,calibrated=cal,model=model,djs_fhd_pipeline_githash=githash,outname=outname,
+                                          nb_path=nb_path)
             plt.close()
         else:
             plt.show()

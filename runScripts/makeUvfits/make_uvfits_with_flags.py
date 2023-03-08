@@ -43,7 +43,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
 print(f'githash: {githash}')
 print(f'pyuvdata version: {pyuvdata.__version__}')
-print(f'numpy version: {np.__version__}')
+print(f'numpy version: {np.__version__} \n')
 
 if not os.path.exists(args.outdir):
     os.makedirs(args.outdir)
@@ -79,7 +79,7 @@ for i in range(0,len(file_names),N):
     ssins = ssins_files[i//N]
     print('SSINS file:')
     print(ssins)
-    print('\nreading data')
+    print('\nreading data \n')
     uvd = UVData()
     uvd.read(data)
     use_ants = [ant for ant in uvd.get_ants() if ant not in xants]

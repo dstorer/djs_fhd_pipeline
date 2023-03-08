@@ -194,6 +194,7 @@ print(raw.get_antpairs())
 raw.select(bls=bls)
 
 Ntimes = raw.Ntimes
+Nblts = raw.Nblts
 print(f'\nData has {Ntimes} time stamps\n')
 Nbls = raw.Nbls
 Nfreqs = len(freqs)
@@ -205,7 +206,7 @@ if int(args.BLS) == 1:
     with open(file, 'wb') as f:
         np.save(f,antpairs)
 # raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
-del raw
+del raw, calData
 
 if int(args.ITER) == 1 or int(args.CONV) == 1:
     print('Reading iter and conv')
@@ -257,21 +258,33 @@ if int(args.ITER) == 1 or int(args.CONV) == 1:
     print('Writing iters and convs \n')
     json.dump(iters, open(f'{file}_iters_{polname}.txt','w'))
     json.dump(convs, open(f'{file}_convs_{polname}.txt','w'))
+    del iters, convs
     
 
 if int(args.RAW) == 1:
-    print('Reading raw data') 
-    rawData = UVData()
-    if clipFreqs:
-        rawData.read(raw_data,polarizations=pol,freq_chans=freqs,bls=bls)
+    if Nblts > 450000:
+        nreads = Nblts//450000+1
+        timesperread = Ntimes//nreads
     else:
-#         rawData.read(raw_data,polarizations=pol,bls=bls)
-        rawData.read(raw_data,polarizations=pol)
+        nreads = 1
+        timesperread = Ntimes
+    for n in range(nreads):
+        rawData = UVData()
+        stopind = n*timesperread + timesperread
+        startind = n*timesperread
+        if stopind >= Ntimes:
+            stopind = Ntimes-1
+        print(f'Reading raw data, iteration {n+1} of {nreads}')
+        print(f'Reading files {raw_data[startind]} to {raw_data[stopind]}')
+        if clipFreqs:
+            rawData.read(raw_data[startind:stopind],polarizations=pol,freq_chans=freqs,bls=bls)
+        else:
+            rawData.read(raw_data[startind:stopind],polarizations=pol)
     
-    print('Writing Raw Data Array \n')
-    file = f'{args.outdir}/{args.juliandate}_fhd_raw_data_{polname}.uvfits'
-    rawData.write_uvfits(file,fix_autos=True)
-    del rawData
+        file = f'{args.outdir}/{args.juliandate}_fhd_raw_data_{polname}_{n}.uvfits'
+        print(f'Writing {file}\n')
+        rawData.write_uvfits(file,fix_autos=True)
+        del rawData
     
 if int(args.GAINS) == 1:
     print('Reading gains')
@@ -319,6 +332,7 @@ if int(args.GAINS) == 1:
         file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}_{ngainsets}.uvfits'
     print('Writing Gains \n')
     g.write_calfits(file,clobber=True)
+    del g
 
 if int(args.CAL) == 1:
     print('Reading calibrated data') 
@@ -351,5 +365,6 @@ if int(args.SSINS) == 1:
 
     print('Writing flags')
     flags.write(f'{args.outdir}/{args.juliandate}_ssins_flags_{polname}.hdf5',clobber=True)
+    del flags
 
 

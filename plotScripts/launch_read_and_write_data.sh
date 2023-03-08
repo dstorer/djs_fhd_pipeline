@@ -29,4 +29,4 @@ do
   esac
 done
 
-sbatch --export=raw_files=${raw_files},fhd_files=${fhd_files},ssins_files=${ssins_files},outdir=${outdir},exants=${exants},jd=${jd},pol=${pol},RAW=${RAW},SSINS=${SSINS},CAL=${CAL},MODEL=${MODEL},JDS=${JDS},LSTS=${LSTS},BLS=${BLS},GAINS=${GAINS},DIRS=${DIRS},ITER=${ITER},CONV=${CONV} -p hera -o ${outdir}/read_and_write_data_${pol}.out -N 1 -n 4 --mem=128G -J write_data --mail-user=darajstorer@gmail.com --mail-type=END  /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/call_read_and_write_data.sh
+sbatch --export=raw_files=${raw_files},fhd_files=${fhd_files},ssins_files=${ssins_files},outdir=${outdir},exants=${exants},jd=${jd},pol=${pol},RAW=${RAW},SSINS=${SSINS},CAL=${CAL},MODEL=${MODEL},JDS=${JDS},LSTS=${LSTS},BLS=${BLS},GAINS=${GAINS},DIRS=${DIRS},ITER=${ITER},CONV=${CONV} -p hera -o ${outdir}/read_and_write_data_${pol}.out --mem=120G -J write_data --mail-user=darajstorer@gmail.com --mail-type=END  /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/call_read_and_write_data.sh
