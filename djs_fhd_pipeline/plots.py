@@ -2,7 +2,7 @@
 """Written by Dara Storer"""
 
 import numpy as np
-from pyuvdata import UVData, UVFlag
+from pyuvdata import UVData, UVFlag, UVCal
 from matplotlib import pyplot as plt
 import os
 import inspect
@@ -10,6 +10,7 @@ from hera_commissioning_tools import utils
 import glob
 import json
 from pyuvdata import utils as pyutils
+from djs_fhd_pipeline import plot_fits
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
@@ -17,11 +18,12 @@ curr_file = __file__
 
 import json
 
-def readFiles(datadir, raw=None, cal=None, model=None, gains=None, extraCal=None, incGains=True):
+def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=False, incGains=True, pol='XX'):
     if raw is None:
         print('Reading raw')
         raw = UVData()
-        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw_file = sorted(glob.glob(f'{datadir}/*_raw_data_{pol}_0.uvfits'))
+#         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
         raw.read(raw_file)
         raw.file_name = raw_file
     else:
@@ -59,10 +61,18 @@ def readFiles(datadir, raw=None, cal=None, model=None, gains=None, extraCal=None
     else:
         gains_file=None
         
-    return raw, cal, model, gains, extraCal
+    if extraCal is not False:
+        return raw, cal, model, gains, extraCal
+    else:
+        return raw, cal, model, gains
 
-def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, write_params=True):
-    fig = plt.figure(figsize=(8,8))
+def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, write_params=True, file_ext='jpeg',
+           hexbin=True, blx=[], bly=[]):
+    import scipy
+    import random
+    args = locals()
+    
+    fig = plt.figure(figsize=(10,8))
     freqs = uv.freq_array[0]
     wl = scipy.constants.speed_of_light/freqs
     bls = np.unique(uv.baseline_array)
@@ -70,37 +80,243 @@ def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, w
     antpos = uv.antenna_positions + uv.telescope_location
     antpos = pyutils.ENU_from_ECEF(antpos, *uv.telescope_location_lat_lon_alt)
     allants = uv.antenna_numbers
-    blx = []
-    bly = []
-    for i,a1 in enumerate(a1s):
-        for a2 in a2s:
-            a1ind = np.argmin(abs(np.subtract(allants,a1)))
-            a2ind = np.argmin(abs(np.subtract(allants,a2)))
-            a1pos = antpos[a1ind]
-            a2pos = antpos[a2ind]
-            bl = np.subtract(a2pos,a1pos)
-            if freq_synthesis:
-                for w in wl:
-                    blx.append(bl[0]/w)
-                    bly.append(bl[1]/w)
-            else:
-                bl = bl/wl[len(wl)//2]
-                blx.append(bl[0])
-                bly.append(bl[1])
-    plt.scatter(blx,bly,alpha=0.2,c='black',s=1)
+    if len(blx)==0 or len(bly)==0:
+        for i,a1 in enumerate(a1s):
+            if i%200==0:
+                print(f'On step {i} of {len(a1s)}')
+            for a2 in a2s:
+                a1ind = np.argmin(abs(np.subtract(allants,a1)))
+                a2ind = np.argmin(abs(np.subtract(allants,a2)))
+                a1pos = antpos[a1ind]
+                a2pos = antpos[a2ind]
+                bl = np.subtract(a2pos,a1pos)
+                if freq_synthesis:
+                    for w in wl[::10]:
+                        blx.append(bl[0]/w)
+                        bly.append(bl[1]/w)
+                else:
+                    bl = bl/wl[len(wl)//2]
+                    blx.append(bl[0])
+                    bly.append(bl[1])
+    if hexbin:
+        hb = plt.hexbin(blx, bly, gridsize=50, cmap='inferno',bins='log')
+        cb = fig.colorbar(hb)
+    else:
+        if len(blx)>100000:
+            blx,bly = zip(*random.sample(list(zip(blx, bly)), 10000))
+        plt.scatter(blx,bly,alpha=0.2,c='black',s=1)
     plt.xlabel('U (wavelengths)')
     plt.ylabel('V (wavelengths)')
-    plt.title(f'UV Coverage - {len[bls]} total baselines')
+    plt.title(f'UV Coverage - {len(bls)} total baselines')
     if savefig:
-            outname = f'{outfig}.{file_ext}'
-            plt.savefig(outname,bbox_inches='tight')
-            if write_params and n==0:
-                curr_func = inspect.stack()[0][3]
-                utils.write_params_to_text(outfig,args,curr_file=curr_file,
-                                           curr_func=curr_func,githash=githash,nb_path=nb_path)
-            plt.close()
+        outname = f'{outfig}.{file_ext}'
+        plt.savefig(outname,bbox_inches='tight')
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func=curr_func,githash=githash,nb_path=nb_path)
+        plt.close()
     else:
         plt.show()
+        plt.close()
+    return blx,bly
+
+def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_range=9,dec_range=9,
+               nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',**kwargs):
+    # To compile frames into movie after this script runs, on terminal execute: 
+    # ffmpeg 2459911_wholeImage_XX.mp4 -r 5 -i 2459911_frame_XX_wholeImage_%3d.jpeg
+    print(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits')
+    dirty_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits'))
+    model_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Model_{pol}.fits'))
+    residual_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Residual_{pol}.fits'))
+    beam_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Beam_{pol}.fits'))
+    uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
+    params_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_params.sav'))
+    obs_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_obs.sav'))
+    layout_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_layout.sav'))
+    dirty_vis_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*vis_{pol}.sav'))
+    flag_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*flags.sav'))
+    settings_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_settings.txt'))
+    args = locals()
+    print(f'Creating images for {len(dirty_files)} files')
+    if nframes=='all':
+        nframes = len(dirty_files)
+    if plot_range=='all':
+        plot_range = [0,nframes]
+    for ind in range(plot_range[0],plot_range[1]):
+        print(str(ind).zfill(3))
+        uv = UVData()
+        fhd_files = [layout_files[ind],obs_files[ind],params_files[ind],dirty_vis_files[ind],flag_files[ind],settings_files[ind]]
+        uv.read_fhd(fhd_files,read_data=False)
+        lst = uv.lst_array[0] * 3.819719 
+        pos = [uv.phase_center_app_ra*57.2958,-31]
+        _dec_range = [pos[1]-dec_range/2,pos[1]+dec_range/2]
+        prefix = f'{fhd_path}/output_data'
+        color_scale=[-1763758,1972024]
+        output_path = ''
+        write_pixel_coordinates=False
+        log_scale=False
+
+        fig, axes = plt.subplots(2,2,figsize=(20,20))
+        data = plot_fits.load_image(dirty_files[ind])
+        im = plot_fits.plot_fits_image(data, axes[0][0], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Calibrated')
+        data = plot_fits.load_image(model_files[ind])
+        im = plot_fits.plot_fits_image(data, axes[0][1], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Model')
+        data = plot_fits.load_image(residual_files[ind])
+        vmin = np.percentile(data.signal_arr,5)
+        vmax = np.percentile(data.signal_arr,95)
+        im = plot_fits.plot_fits_image(data, axes[1][0], [vmin,vmax], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Residual')
+        sources = plot_fits.gather_source_list()
+        im = plot_fits.plot_sky_map(uv,axes[1][1],dec_pad=55,ra_pad=55,clip=False,sources=sources)
+        ax = plt.gca()
+        plt.suptitle(f'LST {np.around(lst,2)}',fontsize=30,y=0.92)
+        if savefig == True:
+            if len(outsuffix) > 0:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{outsuffix}_{str(ind).zfill(3)}.{file_ext}'
+            else:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}.{file_ext}'
+            plt.savefig(outfig,facecolor='white')
+            if write_params and ind==0:
+#                 curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_func='make_frames',
+                       curr_file=curr_file,**kwargs)
+        else:
+            plt.show()
+        plt.close()
+
+def make_frames_with_vis(fhd_path,uvfits_path,outdir,dirty_vis,model_vis,gains,raw_vis,flags,lsts,
+                         pol='XX',savefig=False,ant=99,lst_mask=False,jd=2459855,write_params=True):
+    dirty_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits'))
+    model_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Model_{pol}.fits'))
+    residual_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Residual_{pol}.fits'))
+    beam_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Beam_{pol}.fits'))
+    source_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Sources_{pol}.fits'))
+    args = locals()
+#     uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
+    
+#     lst_blacklists = "0-1.3 2.5-4.3 6.5-9.1 10.6-11.5 11.9-14.3 16.3-1.3"
+    lst_blacklists = [(0,1.3),(2.5,4.3),(6.5,9.1),(10.6,11.5),(11.9,14.3),(16.3,24)]
+    
+    if lst_mask:
+        alpha_mask = np.ones(np.shape(raw_vis))
+        for l,lst in enumerate(np.multiply(lsts,3.819719)):
+            mask = False
+            for r in lst_blacklists:
+    #             print(r)
+                if r[0]<=lst<=r[1]:
+    #                 print(f'LST {lst} in range {r}')
+                    mask = True
+            if mask == True:
+                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)*0.4
+            else:
+                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)
+    else:
+        alpha_mask = 1
+            
+    
+    print(f'Creating images for {len(dirty_files)} files')
+    for ind in range(0,len(dirty_files)):
+#     for ind in range(10,11):
+        if ind%20==0:
+            print(str(ind).zfill(3))
+        uv = UVData()
+        uv.read(uvfits_path)
+        freqs = uv.freq_array[0]*1e-6
+        pos = [uv.phase_center_app_ra*57.2958,-31]
+        dec_range = [pos[1]-4.5,pos[1]+4.5]
+        ra_range=9
+#         print(f'Pos: {pos}')
+#         ra_range = [pos[0]-6,pos[0]+7.8]
+# #         ra_range = np.subtract(ra_range,360)
+# #         print(ra_range)
+#         if ra_range[0] > 180:
+#             ra_range[0] = ra_range[0]-360
+#         if ra_range[1] > 180:
+#             ra_range[1] = ra_range[1]-360
+# #         ra_range=None
+
+#         dec_range = [pos[1]-6.5,pos[1]+6.5]
+# #         dec_range=None
+# #         print('dec_range')
+# #         print(dec_range)
+        prefix = f'{fhd_path}/output_data'
+        color_scale=[-1763758,1972024]
+        output_path = ''
+        write_pixel_coordinates=False
+        log_scale=False
+        hline_frac = (ind/len(dirty_files))
+
+        fig = plt.figure(figsize=(20,20))
+        fig.tight_layout(rect=(0, 0, 1, 0.95))
+        gs = fig.add_gridspec(5, 3,wspace=0.2,hspace=0.3)
+        #Beam
+        beam = plot_fits.load_image(beam_files[ind])
+        ax = fig.add_subplot(gs[0, 0])
+        im = plot_fits.plot_fits_image(beam, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Beam')
+#         #raw visibilities
+#         ax = fig.add_subplot(gs[0,1:])
+# #         raw_dat = np.ma.masked_where(flags[:,0,:,0]==True,np.abs(raw_vis))
+#         raw_dat = np.abs(raw_vis)
+#         im = plot_vis.plot_raw_vis(raw_dat,ax,ant,lsts,freqs,alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(raw_vis),color='c')
+        
+        #dirty image
+        data = plot_fits.load_image(dirty_files[ind])
+        ax = fig.add_subplot(gs[1, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Dirty')
+        #dirty vis
+#         ax = fig.add_subplot(gs[1, 1:])
+#         im = plot_vis.plot_vis(dirty_vis,ax,(ant,ant),dtype='dirty',alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(dirty_vis['amp'][(ant,ant)]),color='c')
+        #model image
+        data = plot_fits.load_image(model_files[ind])
+        ax = fig.add_subplot(gs[2, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Model')
+        #model vis
+#         ax = fig.add_subplot(gs[2, 1:])
+#         im = plot_vis.plot_vis(model_vis,ax,(ant,ant),dtype='model',alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(model_vis['amp'][(ant,ant)]),color='c')
+        #residual image
+        data = plot_fits.load_image(residual_files[ind])
+        ax = fig.add_subplot(gs[3, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Residual')
+        #gains
+#         ax = fig.add_subplot(gs[3, 1:])
+#         im = plot_vis.plot_gains(gains,ax,ant,set_alpha_mask=True)
+#         ax.axhline(hline_frac*len(gains[ant]['cal_array']),color='c')
+        #Source Image
+        data = plot_fits.load_image(source_files[ind])
+        ax = fig.add_subplot(gs[4, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, [0,10000000], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Sources')
+        #sky map
+        sources = plot_fits.gather_source_list()
+        ax = fig.add_subplot(gs[4, 1:])
+        im = plot_fits.plot_sky_map(uv,ax,dec_pad=55,ra_pad=55,clip=False,sources=sources)
+
+        
+        ax = plt.gca()
+        if savefig == True:
+            print('saving')
+            outname = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}'
+            plt.savefig(f'{outname}.png',facecolor='white')
+            if write_params and ind==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outname,args,curr_file=curr_file,
+                                           curr_func=curr_func,githash=githash)
+        else:
+            plt.show()
         plt.close()
 
 def getCrossesPerAnt(uv,ant):
@@ -238,17 +454,21 @@ def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = Non
                     readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90,
                    extraCal=False,cal2=None,lstRange=[],ytick_unit='lst',incGains=False,fringe=False,
                    multiplyGains=False,useFtWindow=False,normDs=False,dsLogScale=True,delayRange=None,
-                   nb_path=None):
+                   nb_path=None,fixLsts=False):
     from uvtools import dspec
     args = locals()
     
     dirlist=None
-    rawFull, calFull, modelFull, gainsFull, extraCal = readFiles(datadir,rawFull,calFull,modelFull,gainsFull,extraCal=extraCal,
-                                                incGains=incGains)
+    rawFull, calFull, modelFull, gainsFull = readFiles(datadir,jd,rawFull,calFull,modelFull,gainsFull,
+                                                                 extraCal=extraCal,incGains=incGains,pol=pol)
     
     if incGains:
         times = np.unique(gainsFull.time_array)
         caltimes = np.unique(calFull.time_array)
+        rawtimes = np.unique(rawFull.time_array)
+        if len(rawtimes)<len(caltimes):
+            calFull.select(times=rawtimes)
+            caltimes = np.unique(calFull.time_array)
         if caltimes[0]<times[0]:
             ind = np.argmin(abs(np.subtract(caltimes,times[0])))
             caltimes = caltimes[ind:]
@@ -263,16 +483,17 @@ def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = Non
         rawFull.select(times=caltimes)
         modelFull.select(times=caltimes)
     
-    try:
-        loc = rawFull.telescope_location_lat_lon_alt_degrees
-        rawLsts = pyutils.get_lst_for_time(rawFull.time_array,loc[0],loc[1],loc[2])
-        fhdLsts = pyutils.get_lst_for_time(calFull.time_array,loc[0],loc[1],loc[2])
-        print(fhdLsts)
-        rawFull.lst_array = rawLsts
-        calFull.lst_array = fhdLsts
-        modelFull.lst_array = rawLsts
-    except:
-        print('uh oh')
+    if fixLsts:
+        try:
+            loc = rawFull.telescope_location_lat_lon_alt_degrees
+            rawLsts = pyutils.get_lst_for_time(rawFull.time_array,loc[0],loc[1],loc[2])
+            fhdLsts = pyutils.get_lst_for_time(calFull.time_array,loc[0],loc[1],loc[2])
+            print(f'fhdLsts: {fhdLsts}')
+            rawFull.lst_array = rawLsts
+            calFull.lst_array = fhdLsts
+            modelFull.lst_array = rawLsts
+        except:
+            print('uh oh')
     if len(lstRange)>0:
         l = rawLsts  * 3.819719
         inds = np.unique(l, return_index=True)[1]
@@ -586,9 +807,8 @@ def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = Non
             if write_params and n==0:
                 curr_func = inspect.stack()[0][3]
                 utils.write_params_to_text(outfig,args,dirlist=dirlist,curr_file=curr_file,curr_func=curr_func,githash=githash,
-                                          raw_file=raw_file,cal_file=cal_file,model_file=model_file,
                                            raw=raw,calibrated=cal,model=model,djs_fhd_pipeline_githash=githash,outname=outname,
-                                          nb_path=nb_path)
+                                          nb_path=nb_path,datadir=datadir)
             plt.close()
         else:
             plt.show()
