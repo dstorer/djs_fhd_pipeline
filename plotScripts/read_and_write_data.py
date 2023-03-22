@@ -168,45 +168,45 @@ for i,flist in enumerate(fhd_file_array):
         print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
         break
     
-raw = UVData()
-# raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
-# print(raw_data)
-raw.read(raw_data,read_data=False,ignore_name=True)
-if int(args.JDS) == 1:
-    print('Writing JD array')
-    jds = raw.time_array
-    jds = np.reshape(jds,(raw.Ntimes,-1))
-    np.save(f'{args.outdir}/{args.juliandate}_jd_array',jds[:,0])
-if int(args.LSTS) == 1:
-    print('Writing LST array')
-    lsts = raw.lst_array * 3.819719
-    lsts = np.reshape(lsts,(raw.Ntimes,-1))
-    np.save(f'{args.outdir}/{args.juliandate}_lst_array',lsts[:,0])
+# raw = UVData()
+# # raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
+# # print(raw_data)
+# raw.read(raw_data,read_data=False,ignore_name=True)
+# if int(args.JDS) == 1:
+#     print('Writing JD array')
+#     jds = raw.time_array
+#     jds = np.reshape(jds,(raw.Ntimes,-1))
+#     np.save(f'{args.outdir}/{args.juliandate}_jd_array',jds[:,0])
+# if int(args.LSTS) == 1:
+#     print('Writing LST array')
+#     lsts = raw.lst_array * 3.819719
+#     lsts = np.reshape(lsts,(raw.Ntimes,-1))
+#     np.save(f'{args.outdir}/{args.juliandate}_lst_array',lsts[:,0])
     
-if args.xants is not None:
-    with open(args.xants, 'r') as xfile:
-        xants = yaml.safe_load(xfile)
-    use_ants = [a for a in raw.get_ants() if a not in xants]
-    raw.select(antenna_nums=use_ants)
-print('Performing baseline selection on raw data to match baseline set in cal and model data')
-print('Raw baselines:')
-print(raw.get_antpairs())
-raw.select(bls=bls)
+# if args.xants is not None:
+#     with open(args.xants, 'r') as xfile:
+#         xants = yaml.safe_load(xfile)
+#     use_ants = [a for a in raw.get_ants() if a not in xants]
+#     raw.select(antenna_nums=use_ants)
+# print('Performing baseline selection on raw data to match baseline set in cal and model data')
+# print('Raw baselines:')
+# print(raw.get_antpairs())
+# raw.select(bls=bls)
 
-Ntimes = raw.Ntimes
-Nblts = raw.Nblts
-print(f'\nData has {Ntimes} time stamps\n')
-Nbls = raw.Nbls
-Nfreqs = len(freqs)
-Npols = raw.Npols
-antpairs = np.asarray(raw.get_antpairs())
-if int(args.BLS) == 1:
-    print('Writing baseline array')
-    file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
-    with open(file, 'wb') as f:
-        np.save(f,antpairs)
-# raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
-del raw, calData
+# Ntimes = raw.Ntimes
+# Nblts = raw.Nblts
+# print(f'\nData has {Ntimes} time stamps\n')
+# Nbls = raw.Nbls
+# Nfreqs = len(freqs)
+# Npols = raw.Npols
+# antpairs = np.asarray(raw.get_antpairs())
+# if int(args.BLS) == 1:
+#     print('Writing baseline array')
+#     file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
+#     with open(file, 'wb') as f:
+#         np.save(f,antpairs)
+# # raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
+# del raw, calData
 
 if int(args.ITER) == 1 or int(args.CONV) == 1:
     print('Reading iter and conv')
