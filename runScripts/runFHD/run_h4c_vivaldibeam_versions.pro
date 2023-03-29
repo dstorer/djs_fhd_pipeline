@@ -4,18 +4,20 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   heap_gc
 
   ; parse command line args
-  args = command_line_args(count=nargs)
-  print, nargs
-  vis_file_list=args[0]
-  print, args[0]
-  version=args[1]
-  print, args[1]
-  output_directory = args[2]
-  case_name=args[3]
+  ;args = command_line_args(count=nargs)
+  ;print, nargs
+  ;vis_file_list=args[0]
+  ;print, args[0]
+  ;version=args[1]
+  ;print, args[1]
+  ;output_directory = args[2]
+  ;case_name=args[3]
+  case_name='test_deconvolve_no_sidelobe_later_time'
 
   instrument = 'hera'
 
   beam_nfreq_avg=1
+  save_beam_metadata_only=0
   no_frequency_flagging=1
 
   calibrate_visibilities=1
@@ -32,9 +34,10 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
   calibration_catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
 
-  calibration_auto_initialize=1
+  calibration_auto_initialize=0
   
   allow_sidelobe_cal_sources=1
+  ;subtract_sidelobe_catalog="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
 
   combine_obs=0
   dimension=1024.
@@ -77,9 +80,8 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   beam_model_version=4
   dft_threshold=1
   init_healpix
-  fhd_file_list=fhd_path_setup(vis_file_list,version=version,output_directory=output_directory,_Extra=extra)
-  healpix_path=fhd_path_setup(output_dir=output_directory,subdir='Healpix',output_filename='Combined_obs',version=version,_Extra=extra)
   
+    
   case case_name of
   
     'test_versions': begin
@@ -192,6 +194,126 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
         cal_time_average=1
         initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/fhdOutput/mediumRestrictive_intersnapOnly/fhd_2459855.6033653542_mediumRestrictive_intersnap_caltimeaverage1_mid_3/calibration/zen.2459855.6033653547_mid_10obs_1_cal.sav'
     end
+    
+    'medRes_IS_useInitialCalibration_localTesting': begin
+      cal_time_average=1
+      initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testInitialCal/zen.2459855.6033653547_mid_10obs_1_cal.sav'
+      no_png=0
+      calibration_auto_initialize=0
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testInitialCal/zen.2459855.5944175064_mid_10obs_85.uvfits'
+      version='medRes_IS_useInitialCalibration_localTesting'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testInitialCal'
+      recalculate_all=0
+    end
+    
+    'test_deconvolve': begin
+      firstpass=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 1
+      return_decon_visibilities = 1
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testInitialCal/zen.2459855.6033653547_mid_10obs_1_cal.sav'
+      version='test_deconvolve_10obs_no_ps'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.2960802047_mid_10obs_19.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe': begin
+      firstpass=0
+      subtract_sidelobe_catalog=0
+      allow_sidelobe_cal_sources=0
+      allow_sidelobe_model_sources=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 1
+      return_decon_visibilities = 1
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testInitialCal/zen.2459855.6033653547_mid_10obs_1_cal.sav'
+      version='test_deconvolve_10obs_no_ps_no_sidelobe'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.2960802047_mid_10obs_19.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time': begin
+      firstpass=0
+      subtract_sidelobe_catalog=0
+      allow_sidelobe_cal_sources=0
+      allow_sidelobe_model_sources=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 1
+      return_decon_visibilities = 1
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version='test_deconvolve_10obs_no_ps_no_sidelobe_later_time'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
 
   endcase
 
@@ -203,6 +325,8 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   ;  IF ~(Tag_exist(extra,'model_visibilities') OR (N_Elements(model_visibilities) GT 0)) THEN model_visibilities=1
   ;ENDIF
   ;undefine_fhd,default_diffuse
+  fhd_file_list=fhd_path_setup(vis_file_list,version=version,output_directory=output_directory,_Extra=extra)
+  healpix_path=fhd_path_setup(output_dir=output_directory,subdir='Healpix',output_filename='Combined_obs',version=version,_Extra=extra)
 
   IF N_Elements(extra) GT 0 THEN cmd_args=extra
   extra=var_bundle()
