@@ -2,19 +2,859 @@
 """Written by Dara Storer"""
 
 import numpy as np
-from pyuvdata import UVData, UVFlag
+from pyuvdata import UVData, UVFlag, UVCal
 from matplotlib import pyplot as plt
 import os
 import inspect
 from hera_commissioning_tools import utils
 import glob
 import json
+from pyuvdata import utils as pyutils
+from djs_fhd_pipeline import plot_fits
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
 curr_file = __file__
 
 import json
+
+def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=False, incGains=True, pol='XX'):
+    if raw is None:
+        print('Reading raw')
+        raw = UVData()
+        raw_file = sorted(glob.glob(f'{datadir}/*_raw_data_{pol}_0.uvfits'))
+#         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw.read(raw_file)
+        raw.file_name = raw_file
+    else:
+        raw_file=None
+    if cal is None:
+        print('Reading cal')
+        cal = UVData()
+        cal_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}.uvfits'
+        cal.read(cal_file)
+        cal.file_name = cal_file
+    else:
+        cal_file=None
+    if extraCal is True and cal2 is None:
+        print('Reading extraCal')
+        cal2 = UVData()
+        cal2_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}_1.uvfits'
+        cal2.read(cal2_file)
+        cal2.file_name = cal2_file
+    else:
+        cal2_file=None
+    if model is None:
+        print('Reading model')
+        model = UVData()
+        model_file = f'{datadir}/{jd}_fhd_model_data_{pol}.uvfits'
+        model.read(model_file)
+        model.file_name=model_file
+    else:
+        model_file=None
+    if incGains is True and gains is None:
+        print('Reading Gains')
+        gains = UVCal()
+        gains_file = f'{datadir}/{jd}_fhd_gains_{pol}_0.uvfits'
+        gains.read_calfits(gains_file)
+        gains.file_name=gains_file
+    else:
+        gains_file=None
+        
+    if extraCal is not False:
+        return raw, cal, model, gains, extraCal
+    else:
+        return raw, cal, model, gains
+
+def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, write_params=True, file_ext='jpeg',
+           hexbin=True, blx=[], bly=[]):
+    import scipy
+    import random
+    args = locals()
+    
+    fig = plt.figure(figsize=(10,8))
+    freqs = uv.freq_array[0]
+    wl = scipy.constants.speed_of_light/freqs
+    bls = np.unique(uv.baseline_array)
+    a1s,a2s = pyutils.baseline_to_antnums(bls, uv.Nants_data)
+    antpos = uv.antenna_positions + uv.telescope_location
+    antpos = pyutils.ENU_from_ECEF(antpos, *uv.telescope_location_lat_lon_alt)
+    allants = uv.antenna_numbers
+    if len(blx)==0 or len(bly)==0:
+        for i,a1 in enumerate(a1s):
+            if i%200==0:
+                print(f'On step {i} of {len(a1s)}')
+            for a2 in a2s:
+                a1ind = np.argmin(abs(np.subtract(allants,a1)))
+                a2ind = np.argmin(abs(np.subtract(allants,a2)))
+                a1pos = antpos[a1ind]
+                a2pos = antpos[a2ind]
+                bl = np.subtract(a2pos,a1pos)
+                if freq_synthesis:
+                    for w in wl[::10]:
+                        blx.append(bl[0]/w)
+                        bly.append(bl[1]/w)
+                else:
+                    bl = bl/wl[len(wl)//2]
+                    blx.append(bl[0])
+                    bly.append(bl[1])
+    if hexbin:
+        hb = plt.hexbin(blx, bly, gridsize=50, cmap='inferno',bins='log')
+        cb = fig.colorbar(hb)
+    else:
+        if len(blx)>100000:
+            blx,bly = zip(*random.sample(list(zip(blx, bly)), 10000))
+        plt.scatter(blx,bly,alpha=0.2,c='black',s=1)
+    plt.xlabel('U (wavelengths)')
+    plt.ylabel('V (wavelengths)')
+    plt.title(f'UV Coverage - {len(bls)} total baselines')
+    if savefig:
+        outname = f'{outfig}.{file_ext}'
+        plt.savefig(outname,bbox_inches='tight')
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func=curr_func,githash=githash,nb_path=nb_path)
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
+    return blx,bly
+
+def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_range=9,dec_range=9,
+               nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',**kwargs):
+    # To compile frames into movie after this script runs, on terminal execute: 
+    # ffmpeg 2459911_wholeImage_XX.mp4 -r 5 -i 2459911_frame_XX_wholeImage_%3d.jpeg
+    print(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits')
+    dirty_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits'))
+    model_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Model_{pol}.fits'))
+    residual_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Residual_{pol}.fits'))
+    beam_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Beam_{pol}.fits'))
+    uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
+    params_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_params.sav'))
+    obs_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_obs.sav'))
+    layout_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_layout.sav'))
+    dirty_vis_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*vis_{pol}.sav'))
+    flag_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*flags.sav'))
+    settings_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_settings.txt'))
+    args = locals()
+    print(f'Creating images for {len(dirty_files)} files')
+    if nframes=='all':
+        nframes = len(dirty_files)
+    if plot_range=='all':
+        plot_range = [0,nframes]
+    for ind in range(plot_range[0],plot_range[1]):
+        print(str(ind).zfill(3))
+        uv = UVData()
+        fhd_files = [layout_files[ind],obs_files[ind],params_files[ind],dirty_vis_files[ind],flag_files[ind],settings_files[ind]]
+        uv.read_fhd(fhd_files,read_data=False)
+        lst = uv.lst_array[0] * 3.819719 
+        pos = [uv.phase_center_app_ra*57.2958,-31]
+        _dec_range = [pos[1]-dec_range/2,pos[1]+dec_range/2]
+        prefix = f'{fhd_path}/output_data'
+        color_scale=[-1763758,1972024]
+        output_path = ''
+        write_pixel_coordinates=False
+        log_scale=False
+
+        fig, axes = plt.subplots(2,2,figsize=(20,20))
+        data = plot_fits.load_image(dirty_files[ind])
+        im = plot_fits.plot_fits_image(data, axes[0][0], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Calibrated')
+        data = plot_fits.load_image(model_files[ind])
+        im = plot_fits.plot_fits_image(data, axes[0][1], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Model')
+        data = plot_fits.load_image(residual_files[ind])
+        vmin = np.percentile(data.signal_arr,5)
+        vmax = np.percentile(data.signal_arr,95)
+        im = plot_fits.plot_fits_image(data, axes[1][0], [vmin,vmax], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Residual')
+        sources = plot_fits.gather_source_list()
+        im = plot_fits.plot_sky_map(uv,axes[1][1],dec_pad=55,ra_pad=55,clip=False,sources=sources)
+        ax = plt.gca()
+        plt.suptitle(f'LST {np.around(lst,2)}',fontsize=30,y=0.92)
+        if savefig == True:
+            if len(outsuffix) > 0:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{outsuffix}_{str(ind).zfill(3)}.{file_ext}'
+            else:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}.{file_ext}'
+            plt.savefig(outfig,facecolor='white')
+            if write_params and ind==0:
+#                 curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_func='make_frames',
+                       curr_file=curr_file,**kwargs)
+        else:
+            plt.show()
+        plt.close()
+
+def make_frames_with_vis(fhd_path,uvfits_path,outdir,dirty_vis,model_vis,gains,raw_vis,flags,lsts,
+                         pol='XX',savefig=False,ant=99,lst_mask=False,jd=2459855,write_params=True):
+    dirty_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits'))
+    model_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Model_{pol}.fits'))
+    residual_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Residual_{pol}.fits'))
+    beam_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Beam_{pol}.fits'))
+    source_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Sources_{pol}.fits'))
+    args = locals()
+#     uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
+    
+#     lst_blacklists = "0-1.3 2.5-4.3 6.5-9.1 10.6-11.5 11.9-14.3 16.3-1.3"
+    lst_blacklists = [(0,1.3),(2.5,4.3),(6.5,9.1),(10.6,11.5),(11.9,14.3),(16.3,24)]
+    
+    if lst_mask:
+        alpha_mask = np.ones(np.shape(raw_vis))
+        for l,lst in enumerate(np.multiply(lsts,3.819719)):
+            mask = False
+            for r in lst_blacklists:
+    #             print(r)
+                if r[0]<=lst<=r[1]:
+    #                 print(f'LST {lst} in range {r}')
+                    mask = True
+            if mask == True:
+                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)*0.4
+            else:
+                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)
+    else:
+        alpha_mask = 1
+            
+    
+    print(f'Creating images for {len(dirty_files)} files')
+    for ind in range(0,len(dirty_files)):
+#     for ind in range(10,11):
+        if ind%20==0:
+            print(str(ind).zfill(3))
+        uv = UVData()
+        uv.read(uvfits_path)
+        freqs = uv.freq_array[0]*1e-6
+        pos = [uv.phase_center_app_ra*57.2958,-31]
+        dec_range = [pos[1]-4.5,pos[1]+4.5]
+        ra_range=9
+#         print(f'Pos: {pos}')
+#         ra_range = [pos[0]-6,pos[0]+7.8]
+# #         ra_range = np.subtract(ra_range,360)
+# #         print(ra_range)
+#         if ra_range[0] > 180:
+#             ra_range[0] = ra_range[0]-360
+#         if ra_range[1] > 180:
+#             ra_range[1] = ra_range[1]-360
+# #         ra_range=None
+
+#         dec_range = [pos[1]-6.5,pos[1]+6.5]
+# #         dec_range=None
+# #         print('dec_range')
+# #         print(dec_range)
+        prefix = f'{fhd_path}/output_data'
+        color_scale=[-1763758,1972024]
+        output_path = ''
+        write_pixel_coordinates=False
+        log_scale=False
+        hline_frac = (ind/len(dirty_files))
+
+        fig = plt.figure(figsize=(20,20))
+        fig.tight_layout(rect=(0, 0, 1, 0.95))
+        gs = fig.add_gridspec(5, 3,wspace=0.2,hspace=0.3)
+        #Beam
+        beam = plot_fits.load_image(beam_files[ind])
+        ax = fig.add_subplot(gs[0, 0])
+        im = plot_fits.plot_fits_image(beam, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Beam')
+#         #raw visibilities
+#         ax = fig.add_subplot(gs[0,1:])
+# #         raw_dat = np.ma.masked_where(flags[:,0,:,0]==True,np.abs(raw_vis))
+#         raw_dat = np.abs(raw_vis)
+#         im = plot_vis.plot_raw_vis(raw_dat,ax,ant,lsts,freqs,alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(raw_vis),color='c')
+        
+        #dirty image
+        data = plot_fits.load_image(dirty_files[ind])
+        ax = fig.add_subplot(gs[1, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Dirty')
+        #dirty vis
+#         ax = fig.add_subplot(gs[1, 1:])
+#         im = plot_vis.plot_vis(dirty_vis,ax,(ant,ant),dtype='dirty',alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(dirty_vis['amp'][(ant,ant)]),color='c')
+        #model image
+        data = plot_fits.load_image(model_files[ind])
+        ax = fig.add_subplot(gs[2, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Model')
+        #model vis
+#         ax = fig.add_subplot(gs[2, 1:])
+#         im = plot_vis.plot_vis(model_vis,ax,(ant,ant),dtype='model',alpha_mask=alpha_mask)
+#         ax.axhline(hline_frac*len(model_vis['amp'][(ant,ant)]),color='c')
+        #residual image
+        data = plot_fits.load_image(residual_files[ind])
+        ax = fig.add_subplot(gs[3, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Residual')
+        #gains
+#         ax = fig.add_subplot(gs[3, 1:])
+#         im = plot_vis.plot_gains(gains,ax,ant,set_alpha_mask=True)
+#         ax.axhline(hline_frac*len(gains[ant]['cal_array']),color='c')
+        #Source Image
+        data = plot_fits.load_image(source_files[ind])
+        ax = fig.add_subplot(gs[4, 0])
+#         print(ax)
+        im = plot_fits.plot_fits_image(data, ax, [0,10000000], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Sources')
+        #sky map
+        sources = plot_fits.gather_source_list()
+        ax = fig.add_subplot(gs[4, 1:])
+        im = plot_fits.plot_sky_map(uv,ax,dec_pad=55,ra_pad=55,clip=False,sources=sources)
+
+        
+        ax = plt.gca()
+        if savefig == True:
+            print('saving')
+            outname = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}'
+            plt.savefig(f'{outname}.png',facecolor='white')
+            if write_params and ind==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outname,args,curr_file=curr_file,
+                                           curr_func=curr_func,githash=githash)
+        else:
+            plt.show()
+        plt.close()
+
+def getCrossesPerAnt(uv,ant):
+    bls = []
+    crossAnts = []
+    for a in uv.get_ants():
+        try:
+            _ = uv.get_data(ant,a)
+            if a != ant:
+                bls.append((ant,a))
+                crossAnts.append(a)
+        except:
+            continue
+    return np.asarray(bls), np.asarray(crossAnts)
+
+def plotPerAntCrossesAll(datadir, jd, raw=None, pol='XX', savefig=False, write_params=True, outfig='',
+                       file_ext='jpeg',NantsPlot='all',nb_path=None, visNorm=np.abs):
+    if raw==None:
+        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw = UVData()
+        raw.read(raw_file)
+    args = locals()
+    ants = raw.get_ants()
+    Nants = len(ants)
+    if NantsPlot == 'all':
+        NantsPlot = Nants
+    nplots = NantsPlot
+    ncols = 6
+    
+    for n in range(nplots):
+        ant = ants[n]
+        bls, crossAnts = getCrossesPerAnt(raw,ant)
+        
+        lengths = np.asarray(getBaselineLength(raw,bls))
+        leninds = lengths.argsort()
+        lengths = lengths[leninds]
+        crossAnts = crossAnts[leninds]
+        
+        nrows = np.ceil(len(crossAnts)/ncols)
+        fig = plt.figure(figsize=(16,24))
+        gs = fig.add_gridspec(int(nrows),int(ncols))
+        for i,b in enumerate(crossAnts):
+            d = visNorm(raw.get_data(ant,b,pol))
+            ax1 = fig.add_subplot(gs[i//ncols,i%ncols])
+            if visNorm == np.angle:
+                vmin = -np.pi
+                vmax = np.pi
+                cmap = 'twilight'
+#                 print(d)
+            else:
+                vmin=np.percentile(d,10)
+                vmax=np.percentile(d,90)
+                cmap = 'viridis'
+            im1 = ax1.imshow(d,aspect='auto',interpolation='nearest',vmin=vmin,vmax=vmax,cmap=cmap)
+            ax1.set_title(f'({ant},{b}) - {int(lengths[i])}m')
+#             plt.colorbar(im1,cax=ax1)
+            if i%ncols==0:
+                ax1.set_ylabel('Time')
+            else:
+                ax1.set_yticks([])
+            ax1.set_xticks([])
+        
+        if savefig:
+            outname = f'{outfig}_{pol}_{ant}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(f'{outfig}_{pol}',args,curr_file=curr_file,curr_func=curr_func,githash=githash,nb_path=nb_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+
+def plotPerAntCrossSums(datadir, jd, raw=None, pol='XX', antsPerPage=4, savefig=False, write_params=True, outfig='',
+                       file_ext='jpeg'):
+    if raw==None:
+        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw = UVData()
+        raw.read(raw_file)
+    args = locals()
+    ants = raw.get_ants()
+    Nants = len(ants)
+    nplots = Nants//antsPerPage
+    for n in range(nplots):
+        fig = plt.figure(figsize=(16,8*antsPerPage))
+        gs = fig.add_gridspec(antsPerPage,2,wspace=0.15,hspace=0.35)
+        alist = ants[n*antsPerPage:n*antsPerPage+antsPerPage]
+        for i,a in enumerate(alist):
+            inc = np.empty((raw.Ntimes,raw.Nfreqs),dtype='complex128')
+            coh = np.empty((raw.Ntimes,raw.Nfreqs),dtype='complex128')
+            for j,c in enumerate(ants):
+                if a==c:
+                    continue
+                try:
+                    d = raw.get_data(a,c,pol)
+                except:
+                    continue
+#                 print(np.shape(d))
+#                 print(raw.Ntimes)
+#                 print(raw.Nfreqs)
+#                 if j==0:
+#                     inc = abs(d)
+#                     coh = d
+#                 else:
+                inc += abs(d)
+                coh += d
+            coh = abs(coh)
+            inc = abs(inc)
+            ax1 = fig.add_subplot(gs[i,0])
+            im1 = ax1.imshow(coh,aspect='auto',interpolation='nearest',vmin=np.percentile(coh,10),vmax=np.percentile(coh,90))
+            plt.colorbar(im1)
+            ax2 = fig.add_subplot(gs[i,1])
+            im2 = ax2.imshow(inc,aspect='auto',interpolation='nearest',vmin=np.percentile(inc,10),vmax=np.percentile(inc,90))
+            plt.colorbar(im2)
+            if i==0:
+                ax1.set_title('abs(sum)')
+                ax2.set_title('sum(abs)')
+            ax1.set_ylabel(f'ant {a}')
+        
+        if savefig:
+            outname = f'{outfig}_{pol}_{str(n).zfill(2)}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,curr_file=curr_file,curr_func=curr_func,githash=githash,nb_path=nb_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+            
+    
+def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = None, gainsFull = None,
+                    gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
+                   savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
+                    readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90,
+                   extraCal=False,cal2=None,lstRange=[],ytick_unit='lst',incGains=False,fringe=False,
+                   multiplyGains=False,useFtWindow=False,normDs=False,dsLogScale=True,delayRange=None,
+                   nb_path=None,fixLsts=False):
+    from uvtools import dspec
+    args = locals()
+    
+    dirlist=None
+    rawFull, calFull, modelFull, gainsFull = readFiles(datadir,jd,rawFull,calFull,modelFull,gainsFull,
+                                                                 extraCal=extraCal,incGains=incGains,pol=pol)
+    
+    if incGains:
+        times = np.unique(gainsFull.time_array)
+        caltimes = np.unique(calFull.time_array)
+        rawtimes = np.unique(rawFull.time_array)
+        if len(rawtimes)<len(caltimes):
+            calFull.select(times=rawtimes)
+            caltimes = np.unique(calFull.time_array)
+        if caltimes[0]<times[0]:
+            ind = np.argmin(abs(np.subtract(caltimes,times[0])))
+            caltimes = caltimes[ind:]
+        elif caltimes[-1]>times[-1]:
+            ind = np.argmin(abs(np.subtract(caltimes,times[-1])))
+            caltimes = caltimes[0:ind]
+        calFull.select(times=caltimes)
+        rawFull.select(times=caltimes)
+        modelFull.select(times=caltimes)
+    else:
+        caltimes = np.unique(calFull.time_array)
+        rawFull.select(times=caltimes)
+        modelFull.select(times=caltimes)
+    
+    if fixLsts:
+        try:
+            loc = rawFull.telescope_location_lat_lon_alt_degrees
+            rawLsts = pyutils.get_lst_for_time(rawFull.time_array,loc[0],loc[1],loc[2])
+            fhdLsts = pyutils.get_lst_for_time(calFull.time_array,loc[0],loc[1],loc[2])
+            print(f'fhdLsts: {fhdLsts}')
+            rawFull.lst_array = rawLsts
+            calFull.lst_array = fhdLsts
+            modelFull.lst_array = rawLsts
+        except:
+            print('uh oh')
+    if len(lstRange)>0:
+        l = rawLsts  * 3.819719
+        inds = np.unique(l, return_index=True)[1]
+        l = [l[ind] for ind in sorted(inds)]
+        imin = np.argmin(np.abs(np.subtract(l,lstRange[0])))
+        imax = np.argmin(np.abs(np.subtract(l,lstRange[1])))
+        caltimes = caltimes[imin:imax]
+        raw = rawFull.select(times=caltimes,inplace=False)
+        cal = calFull.select(times=caltimes,inplace=False)
+        model = modelFull.select(times=caltimes,inplace=False)
+        if incGains:
+            if caltimes[0]>times[0]:
+                ind = np.argmin(abs(np.subtract(times,caltimes[0])))
+                times = times[ind:]
+            elif caltimes[-1]<times[-1]:
+                ind = np.argmin(abs(np.subtract(times,caltimes[-1])))
+                times = times[0:ind]
+            gains = gainsFull.select(times=times,inplace=False)
+    else:
+        raw = rawFull
+        cal = calFull
+        model = modelFull
+        gains = gainsFull
+    
+    freqs = gains.freq_array[0]*1e-6
+    lstsRaw = raw.lst_array * 3.819719
+    lstsRaw = np.reshape(lstsRaw,(raw.Ntimes,-1))[:,0]
+    lstsFHD = cal.lst_array * 3.819719
+    lstsFHD = np.reshape(lstsFHD,(cal.Ntimes,-1))[:,0]
+    lstsGains = gains.lst_array * 3.819719
+    lstsGains = np.reshape(lstsGains,(gains.Ntimes,-1))[:,0]
+    
+    taus = np.fft.fftshift(np.fft.fftfreq(freqs.size, np.diff(freqs)[0]*1e6))*1e9
+    frs = np.fft.fftshift(np.fft.fftfreq(lstsGains.size, np.diff(lstsGains)[0]*3600))*1e3
+    if delayRange != None:
+        dmin = np.argmin(np.abs(np.subtract(taus,delayRange[0])))
+        dmax = np.argmin(np.abs(np.subtract(taus,delayRange[1])))
+        taus = taus[dmin:dmax]
+    
+    if extraCal:
+        lstsFHD = np.repeat(lstsFHD,2)
+    jdsRaw = np.unique(raw.time_array)
+    jdsFHD = np.unique(cal.time_array)
+    jdsGains = np.unique(gains.time_array)
+    
+    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 5)]
+    xticklabels = [int(freqs[x]) for x in xticks]
+    tauticks = [int(i) for i in np.linspace(0, len(taus) - 1, 5)]
+    tauticklabels = [int(taus[x]) for x in tauticks]
+    frticks = [int(i) for i in np.linspace(0, len(frs) - 1, 6)]
+    frticklabels = [np.around(frs[ytick], 1) for ytick in frticks]
+    yticksRaw = [int(i) for i in np.linspace(0, len(lstsRaw) - 1, 6)]
+    yticksFHD = [int(i) for i in np.linspace(0, len(lstsFHD) - 1, 6)]
+    yticksGains = [int(i) for i in np.linspace(0, len(lstsGains) - 1, 6)]
+    
+    if ytick_unit == 'lst':
+        yticklabelsRaw = [np.around(lstsRaw[ytick], 1) for ytick in yticksRaw]
+        yticklabelsFHD = [np.around(lstsFHD[ytick], 1) for ytick in yticksFHD]
+        yticklabelsGains = [np.around(lstsFHD[ytick], 1) for ytick in yticksFHD]
+    elif ytick_unit == 'jd':
+        yticklabelsFHD = [np.around(jdsFHD[ytick], 4) for ytick in yticksFHD]
+        yticklabelsRaw = [np.around(jdsRaw[ytick], 4) for ytick in yticksRaw]
+        yticklabelsGains = [np.around(jdsGains[ytick], 4) for ytick in yticksGains]
+    
+    allbls = []
+    allants = raw.get_ants()
+    for a1 in allants:
+        for a2 in allants:
+            if a2>a1:
+                try:
+                    _ = cal.get_data(a1,a2)
+                    allbls.append((a1,a2))
+                except:
+                    continue
+    allbls = np.asarray(allbls)
+    alllengths = np.asarray(getBaselineLength(raw,allbls))
+    allangs = []
+    alldisps = []
+    pos = raw.antenna_positions + raw.telescope_location
+    pos = pyutils.ENU_from_ECEF(pos, *raw.telescope_location_lat_lon_alt)
+    if sortBy == 'blLength':
+        leninds = alllengths.argsort()
+        alllengths = alllengths[leninds]
+        allbls = allbls[leninds]
+    if sortBy == 'blLengthRev':
+        leninds = alllengths.argsort()
+        alllengths = alllengths[leninds]
+        allbls = allbls[leninds]
+        allbls = np.flip(allbls)
+    for bl in allbls:
+        p1 = pos[np.argwhere(raw.antenna_numbers == bl[0])]
+        p2 = pos[np.argwhere(raw.antenna_numbers == bl[1])]
+        disp = (p2 - p1)[0][0][0:2]
+        alldisps.append(disp)
+        allangs.append(np.arctan(disp[1]/disp[0])*57.2958)
+    allangs = np.asarray(allangs)
+    alldisps = np.asarray(alldisps)
+    if sortBy == 'blOrientation':
+        anginds = allangs.argsort()
+        allangs = allangs[anginds]
+        allbls = allbls[anginds]
+        alldisps = alldisps[anginds]
+        allbls = np.flip(allbls)
+    if NblsPlot != 'all':
+        if NblsPlot>=1:
+            allbls = allbls[0:NblsPlot]
+        else:
+            inds = np.linspace(0,len(allbls)-1,int(len(allbls)*NblsPlot))
+            allbls = [allbls[int(i)] for i in inds]
+    nbls = len(allbls)
+    nplots = nbls//nsplit
+    for n in range(nplots):
+        if readOnly:
+            continue
+        bls = allbls[n*nsplit:n*nsplit+nsplit]
+        angs = allangs[n*nsplit:n*nsplit+nsplit]
+        disps = alldisps[n*nsplit:n*nsplit+nsplit]
+        if incGains:
+            if multiplyGains:
+                ncols = 5
+                width_ratios=[1,1,1,1,0.05]
+            else:
+                ncols = 6
+                width_ratios=[1,1,1,1,1,0.05]
+        else:
+            ncols = 4
+            width_ratios=[1,1,1,0.05]
+        axes = np.empty((len(bls)*2,ncols),dtype=object)
+        fig = plt.figure(figsize=(16,8*nsplit))
+        gs = fig.add_gridspec(nsplit*2,ncols,width_ratios=width_ratios,wspace=0.15,hspace=0.35)
+        lengths = getBaselineLength(raw,bls)
+        maxlength = np.max(lengths)
+        for b,bl in enumerate(bls):
+            try:
+                r = raw.get_data((bl[0],bl[1],pol))
+                c = cal.get_data((bl[0],bl[1],pol))
+                m = model.get_data((bl[0],bl[1],pol))
+                if incGains:
+                    g1 = np.transpose(gains.get_gains(bl[0],pol))
+                    g2 = np.transpose(gains.get_gains(bl[1],pol))
+                    if multiplyGains:
+                        gm = np.multiply(g1,np.conjugate(g2))
+            except:
+                print(f'Skipping baseline ({bl[0]},{bl[1]})')
+                continue
+            if extraCal:
+                c2 = calNorm(cal2.get_data((bl[0],bl[1],pol)))
+                call = np.empty((np.shape(c)[0] + np.shape(c2)[0],np.shape(c)[1]),dtype=c.dtype)
+                call[0::2,:] = c
+                call[1::2,:] = c2
+                c = call
+            if incGains:
+                if multiplyGains:
+                    norms = [gainNorm,rawNorm,calNorm,modelNorm]
+                    lsts = [lstsGains,lstsRaw,lstsFHD,lstsFHD]
+                    dats = [gm,r,c,m]
+                    fhdax = [2]
+                    gainax = [0]
+                else:
+                    norms = [gainNorm,rawNorm,calNorm,modelNorm,gainNorm]
+                    lsts = [lstsGains,lstsRaw,lstsFHD,lstsFHD,lstsGains]
+                    dats = [g1,r,c,m,g2]
+                    fhdax = [2]
+                    gainax = [0,4]
+            else:
+                norms = [rawNorm,calNorm,modelNorm]
+                dats = [r,c,m]
+                fhdax = [1]
+                gainax = []
+            normDats = []
+            for i,d in enumerate(dats):
+                nd = norms[i](d)
+                normDats.append(nd)
+            for i in range(len(dats)):
+                ax = fig.add_subplot(gs[b*2,i])
+                axd = fig.add_subplot(gs[b*2+1,i])
+                axes[b*2,i] = ax
+                axes[b*2+1,i] = axd
+                norm = norms[i]
+                if norm == np.angle:
+                    vmin = -np.pi
+                    vmax = np.pi
+                    cmap = 'twilight'
+                else:
+                    vmin = np.percentile(normDats[i],100-percentile)
+                    vmax = np.percentile(normDats[i],percentile)
+                    cmap = 'viridis'
+#                 ds = 10.*np.log10(np.sqrt(np.abs(np.fft.fftshift(np.fft.ifft(dats[i],axis=1)))))
+                if useFtWindow:
+                    if fringe:
+                        window_t = dspec.gen_window('bh',len(lsts[i]))
+                    else:
+                        window_t = np.ones(len(lsts[i]))
+                    window_f = dspec.gen_window('bh',len(freqs))
+                    window_mat = np.outer(window_t, window_f)
+                    ds = np.fft.fftshift(np.fft.ifft(dats[i]*window_mat),axes=1)
+                else:
+                    ds = np.fft.fftshift(np.fft.ifft(dats[i]),axes=1)
+                if fringe:
+                    if useFtWindow:
+                        ds = np.fft.fftshift(np.fft.ifft2(dats[i]*window_mat))
+                    else:
+                        ds = np.fft.fftshift(np.fft.ifft2(dats[i]))
+#                     vmind = np.percentile(ds,5)
+#                     vmaxd = np.percentile(ds,95)
+#                 else:
+# #                     ds = 10.*np.log10(np.sqrt(np.abs(ds)))
+# #                     ds = np.divide(ds,np.nanmean(ds))
+                if normDs:
+                    ds /= np.max(ds)
+                if dsLogScale:
+                    ds = np.log10(np.abs(ds))
+                vmind = np.percentile(ds,5)
+                vmaxd = np.percentile(ds,95)
+#                 print(vmind)
+#                 print(vmaxd)
+                if delayRange:
+                    ds = ds[:,dmin:dmax]
+                im = ax.imshow(normDats[i],aspect='auto',interpolation='nearest',vmin=vmin,vmax=vmax,cmap=cmap)
+                imd = axd.imshow(ds,aspect='auto',interpolation='nearest',vmin=vmind,vmax=vmaxd,cmap='viridis')
+            cax = fig.add_subplot(gs[b*2,ncols-1])
+            caxd = fig.add_subplot(gs[b*2+1,ncols-1])
+            bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            height = bbox.height * fig.dpi
+            cax.annotate('', xy=(-40, height/2), xycoords='axes pixels', textcoords='axes pixels', 
+                         xytext=(100*np.cos(angs[b]/57.2958)-40, 100*np.sin(angs[b]/57.2958)+height/2), 
+                         arrowprops=dict(arrowstyle="<-", color='r',linewidth=4))
+            axes[b*2,ncols-1] = cax
+            axes[b*2+1,ncols-1] = caxd
+        
+        for i in range(np.shape(axes)[0]):
+            for j in range(np.shape(axes)[1]):
+                ax = axes[i,j]
+                if ax is None:
+                    continue
+                a1 = bls[i//2][0]
+                a2 = bls[i//2][1]
+                if incGains:
+                    if multiplyGains:
+                        plotnames = [
+                            f'{a1}x{a2}* Gains',
+                            'Raw Visibilities',
+                            'Calibrated Visibilities',
+                            'Model Visibilities',
+                        ]
+                    else:
+                        plotnames = [
+                            f'{a1} Gains',
+                            'Raw Visibilities',
+                            'Calibrated Visibilities',
+                            'Model Visibilities',
+                            f'{a2} Gains'
+                        ]
+                else:
+                    plotnames = [
+                        'Raw Visibilities',
+                        'Calibrated Visibilities',
+                        'Model Visibilities'
+                    ]
+                if j<ncols-1:
+                    if j==0:
+                        if j in fhdax:
+                            ax.set_yticks(yticksFHD)
+                            ax.set_yticklabels(yticklabelsFHD)
+                        elif j in gainax:
+                            if i%2==0:
+                                ax.set_yticks(yticksGains)
+                                ax.set_yticklabels(yticklabelsGains)
+                            else:
+                                ax.set_yticks(frticks)
+                                ax.set_yticklabels(frticklabels)
+                        else:
+                            ax.set_yticks(yticksRaw)
+                            ax.set_yticklabels(yticklabelsRaw)
+                        if fringe and i%2==1:
+                            ax.set_ylabel(f'({a1}, {a2})\n {int(lengths[i//2])}m\n Fringe Rate (MHz)',fontsize=16)
+#                             ax.set_yticks([])
+                        else:
+                            ax.set_ylabel(f'({a1}, {a2})\n {int(lengths[i//2])}m\n Time (LST)',fontsize=16)
+                    else:
+                        ax.set_yticks([])
+                    if i%2==0:
+                        ax.set_xticks(xticks)
+                        ax.set_xticklabels(xticklabels)
+                        ax.set_xlabel('Frequency (MHz)')
+                        ax.set_title(plotnames[j],fontsize=14)
+                    elif i%2==1:
+                        ax.set_xticks(tauticks)
+                        ax.set_xticklabels(tauticklabels)
+                        ax.set_xlabel('Delay (ns)')
+                if j==ncols-1:
+                    if i%2==0:
+                        plt.colorbar(im,cax=ax)
+                    else:
+                        plt.colorbar(imd,cax=ax)
+        avgLen = int(np.mean(lengths))
+        avgAng = int(np.mean(angs))
+        if sortBy == 'blLengthRev' or sortBy == 'blLength':
+            plt.suptitle(f'Avg Length this panel: {avgLen} meters',fontsize=18)
+        elif sortBy == 'blOrientation':
+            plt.suptitle(f'Avg angle this panel: {avgAng} degrees from East',fontsize=18)
+        plt.tight_layout(rect=[0, 0, 1, 0.98])
+        if savefig is True:
+            if sortBy == 'blLength' or sortBy == 'blLengthRev':
+                outname = f'{outfig}_sortBy{sortBy}_{pol}_{str(avgLen).zfill(3)}m_{str(n).zfill(2)}.{file_ext}'
+            elif sortBy == 'blOrientation':
+                outname = f'{outfig}_sortBy{sortBy}_{pol}_{str(n).zfill(2)}.{file_ext}'
+            else:
+                outname = f'{outfig}_sortBy{sortBy}_{pol}_{str(n).zfill(2)}.{file_ext}'
+            plt.savefig(outname,bbox_inches='tight')
+            if write_params and n==0:
+                curr_func = inspect.stack()[0][3]
+                utils.write_params_to_text(outfig,args,dirlist=dirlist,curr_file=curr_file,curr_func=curr_func,githash=githash,
+                                           raw=raw,calibrated=cal,model=model,djs_fhd_pipeline_githash=githash,outname=outname,
+                                          nb_path=nb_path,datadir=datadir)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+            
+    return rawFull, calFull, modelFull, gainsFull
+
+def plotBaselineMap(uv,bls='withData'):
+    allbls = []
+    if bls=='withData':
+        allants = uv.get_ants()
+    elif bls=='all':
+        allants = uv.antenna_numbers
+    for a1 in allants:
+        for a2 in allants:
+            if a2>=a1:
+                if bls=='withData':
+                    try:
+                        _ = uv.get_data(a1,a2)
+                        allbls.append((a1,a2))
+                    except:
+                        continue
+                elif bls=='all':
+                    allbls.append((a1,a2))
+    allbls = np.asarray(allbls)
+    print(len(allbls))
+    allangs = []
+    alldisps = []
+    pos = uv.antenna_positions + uv.telescope_location
+    pos = pyutils.ENU_from_ECEF(pos, *uv.telescope_location_lat_lon_alt)
+    for bl in allbls:
+        p1 = pos[np.argwhere(uv.antenna_numbers == bl[0])]
+        p2 = pos[np.argwhere(uv.antenna_numbers == bl[1])]
+        disp = (p2 - p1)[0][0][0:2]
+        alldisps.append(disp)
+        allangs.append(np.arctan(disp[1]/disp[0])*57.2958)
+    allangs = np.asarray(allangs)
+    alldisps = np.asarray(alldisps)
+    fig = plt.figure(figsize=(10,10))
+    for b,bl in enumerate(allbls):
+        plt.scatter(alldisps[b][0],alldisps[b][1],color='blue')
+    plt.xlabel('EW Separation (m)')
+    plt.ylabel('NS Separation (m)')
+    plt.title('HERA Baseline Map')
+
+
 def plotGainsAndConv(datadir, uvc = None, raw = None, cal = None, model = None,
                     gainNorm=np.abs,rawNorm=np.abs,
                    savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
@@ -515,7 +1355,7 @@ def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,o
     baseline_groups, vec_bin_centers, lengths = uv.get_redundancies(
         use_antpos=False, include_autos=False
     )
-    antpairs, lengths = plots.unpackBlLengths(uv, baseline_groups,lengths)
+    antpairs, lengths = unpackBlLengths(uv, baseline_groups,lengths)
     if type(bl_cut)==int:
         ncuts=1
         bl_cut = [bl_cut]
@@ -577,7 +1417,7 @@ def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=
     else:
         ncuts=len(bl_cut)
     counts = np.zeros((nants,ncuts))
-    antpairs, lengths = plots.unpackBlLengths(uv, baseline_groups,lengths)
+    antpairs, lengths = unpackBlLengths(uv, baseline_groups,lengths)
     if freq < 1000:
         freq = freq*1e6
     wl = scipy.constants.speed_of_light/freq
@@ -585,7 +1425,7 @@ def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=
     print(f'Baseline cut of {bl_cut} lambda is {np.round(bl_cut_m,1)} meters at {int(freq*1e-6)}MHz')
     for i,ant in enumerate(uv.get_ants()):
         bls = [(bl[0],bl[1]) for bl in antpairs if (bl[0]==ant or bl[1]==ant)]
-        lens = np.asarray(plots.getBaselineLength(uv,bls))
+        lens = np.asarray(getBaselineLength(uv,bls))
         if ncuts==1:
             c = np.count_nonzero(lens>=bl_cut_m)
             counts[i] = c

@@ -147,65 +147,66 @@ if clip_data is True:
     raw_data = raw_data[startind:stopind]
 mid_jd = raw_jds[len(raw_jds)//2]
 
-if int(args.BLS) == 1:
-    file_read = False
-    for i,flist in enumerate(fhd_file_array):
-        if obs[i] == 0:
-            continue
-        if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
-            continue
-        if file_read is False:
-            calData = UVData()
-            print(flist)
-            calData.read(flist,use_model=False)
-            calData.select(polarizations=pol)
-            use_ants = calData.get_ants()
-    #         bls = np.unique(calData.baseline_array)
-            bls = calData.get_antpairs()
-    #         print('Baselines:')
-    #         print(bls)
-            Nbls = calData.Nbls
-            print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
-            break
-    
-raw = UVData()
-# raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
-# print(raw_data)
-raw.read(raw_data,read_data=False)
-if int(args.JDS) == 1:
-    print('Writing JD array')
-    jds = raw.time_array
-    jds = np.reshape(jds,(raw.Ntimes,-1))
-    np.save(f'{args.outdir}/{args.juliandate}_jd_array',jds[:,0])
-if int(args.LSTS) == 1:
-    print('Writing LST array')
-    lsts = raw.lst_array * 3.819719
-    lsts = np.reshape(lsts,(raw.Ntimes,-1))
-    np.save(f'{args.outdir}/{args.juliandate}_lst_array',lsts[:,0])
-    
-if args.xants is not None:
-    with open(args.xants, 'r') as xfile:
-        xants = yaml.safe_load(xfile)
-    use_ants = [a for a in raw.get_ants() if a not in xants]
-    raw.select(antenna_nums=use_ants)
-print('Performing baseline selection on raw data to match baseline set in cal and model data')
-print('Raw baselines:')
-print(raw.get_antpairs())
-raw.select(bls=bls)
 
-Ntimes = raw.Ntimes
-print(f'\nData has {Ntimes} time stamps\n')
-Nbls = raw.Nbls
-Nfreqs = len(freqs)
-Npols = raw.Npols
-antpairs = np.asarray(raw.get_antpairs())
-if int(args.BLS) == 1:
-    print('Writing baseline array')
-    file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
-    with open(file, 'wb') as f:
-        np.save(f,antpairs)
-# raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
-del raw
+file_read = False
+for i,flist in enumerate(fhd_file_array):
+    if obs[i] == 0:
+        continue
+    if float(obs[i][4:17]) < startJD or float(obs[i][4:17]) > stopJD:
+        continue
+    if file_read is False:
+        calData = UVData()
+        print(flist)
+        calData.read(flist,use_model=False)
+        calData.select(polarizations=pol)
+        use_ants = calData.get_ants()
+#         bls = np.unique(calData.baseline_array)
+        bls = calData.get_antpairs()
+#             print('Baselines:')
+#             print(bls)
+        Nbls = calData.Nbls
+        print(f'\n{len(use_ants)} antennas in observation set, for a total of {Nbls} baselines \n')
+        break
+    
+# raw = UVData()
+# # raw.read(raw_data,read_data=False,skip_bad_files=True,axis='blt')
+# # print(raw_data)
+# raw.read(raw_data,read_data=False,ignore_name=True)
+# if int(args.JDS) == 1:
+#     print('Writing JD array')
+#     jds = raw.time_array
+#     jds = np.reshape(jds,(raw.Ntimes,-1))
+#     np.save(f'{args.outdir}/{args.juliandate}_jd_array',jds[:,0])
+# if int(args.LSTS) == 1:
+#     print('Writing LST array')
+#     lsts = raw.lst_array * 3.819719
+#     lsts = np.reshape(lsts,(raw.Ntimes,-1))
+#     np.save(f'{args.outdir}/{args.juliandate}_lst_array',lsts[:,0])
+    
+# if args.xants is not None:
+#     with open(args.xants, 'r') as xfile:
+#         xants = yaml.safe_load(xfile)
+#     use_ants = [a for a in raw.get_ants() if a not in xants]
+#     raw.select(antenna_nums=use_ants)
+# print('Performing baseline selection on raw data to match baseline set in cal and model data')
+# print('Raw baselines:')
+# print(raw.get_antpairs())
+# raw.select(bls=bls)
+
+# Ntimes = raw.Ntimes
+# Nblts = raw.Nblts
+# print(f'\nData has {Ntimes} time stamps\n')
+# Nbls = raw.Nbls
+# Nfreqs = len(freqs)
+# Npols = raw.Npols
+# antpairs = np.asarray(raw.get_antpairs())
+# if int(args.BLS) == 1:
+#     print('Writing baseline array')
+#     file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
+#     with open(file, 'wb') as f:
+#         np.save(f,antpairs)
+# # raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
+# del raw, calData
 
 if int(args.ITER) == 1 or int(args.CONV) == 1:
     print('Reading iter and conv')
@@ -257,21 +258,33 @@ if int(args.ITER) == 1 or int(args.CONV) == 1:
     print('Writing iters and convs \n')
     json.dump(iters, open(f'{file}_iters_{polname}.txt','w'))
     json.dump(convs, open(f'{file}_convs_{polname}.txt','w'))
+    del iters, convs
     
 
 if int(args.RAW) == 1:
-    print('Reading raw data') 
-    rawData = UVData()
-    if clipFreqs:
-        rawData.read(raw_data,polarizations=pol,freq_chans=freqs,bls=bls)
+    if Nblts > 450000:
+        nreads = Nblts//450000+1
+        timesperread = Ntimes//nreads
     else:
-#         rawData.read(raw_data,polarizations=pol,bls=bls)
-        rawData.read(raw_data,polarizations=pol)
+        nreads = 1
+        timesperread = Ntimes
+    for n in range(nreads):
+        rawData = UVData()
+        stopind = n*timesperread + timesperread
+        startind = n*timesperread
+        if stopind >= Ntimes:
+            stopind = Ntimes-1
+        print(f'Reading raw data, iteration {n+1} of {nreads}')
+        print(f'Reading files {raw_data[startind]} to {raw_data[stopind]}')
+        if clipFreqs:
+            rawData.read(raw_data[startind:stopind],polarizations=pol,freq_chans=freqs,bls=bls)
+        else:
+            rawData.read(raw_data[startind:stopind],polarizations=pol)
     
-    print('Writing Raw Data Array \n')
-    file = f'{args.outdir}/{args.juliandate}_fhd_raw_data_{polname}.uvfits'
-    rawData.write_uvfits(file,fix_autos=True)
-    del rawData
+        file = f'{args.outdir}/{args.juliandate}_fhd_raw_data_{polname}_{n}.uvfits'
+        print(f'Writing {file}\n')
+        rawData.write_uvfits(file,fix_autos=True)
+        del rawData
     
 if int(args.GAINS) == 1:
     print('Reading gains')
@@ -319,6 +332,7 @@ if int(args.GAINS) == 1:
         file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}_{ngainsets}.uvfits'
     print('Writing Gains \n')
     g.write_calfits(file,clobber=True)
+    del g
 
 if int(args.CAL) == 1:
     print('Reading calibrated data') 
@@ -351,5 +365,6 @@ if int(args.SSINS) == 1:
 
     print('Writing flags')
     flags.write(f'{args.outdir}/{args.juliandate}_ssins_flags_{polname}.hdf5',clobber=True)
+    del flags
 
 

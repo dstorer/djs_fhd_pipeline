@@ -17,6 +17,7 @@ import h5py
 import hdf5plugin
 import subprocess
 from hera_commissioning_tools import utils as com_utils
+from sys import exit
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--filename",
@@ -82,8 +83,11 @@ if i*ncomb+ncomb >= len(file_names):
     raise Exception("Index exceeds number of available files")
 print(f'Running on {f1}')
 name = f1.split('/')[-1][0:-5]
-prefix = f'{args.prefix}/{name}'
-#     print(f'Prefix: {prefix}')
+prefix = f'{args.prefix}/{name}_{i}'
+print(f'Prefix: {prefix}')
+if os.path.isfile(f'{prefix}.SSINS.flags.h5'):
+    print(f'Stopping because file {prefix}.SSINS.flags.h5 already exists')
+    exit()
 
 version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
 version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
@@ -151,6 +155,7 @@ uvf = UVFlag(uvd, waterfall=True, mode='flag')
 del uvd
 
 # Make the SS object
+print('Making SS object')
 ss = SS()
 if args.num_baselines > 0:
     ss.read(file_names[i*ncomb:i*ncomb+ncomb], bls=bls[:args.num_baselines],
@@ -178,11 +183,12 @@ else:
 del ss
 
 # Write the raw data and z-scores to h5 format
+print('Writing data')
 ins.write(prefix, sep='.', clobber=clobber)
 ins.write(prefix, output_type='z_score', sep='.', clobber=clobber)
 
 # Write out plots
-cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+# cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 #     ins.write(prefix)
 #     ins.write(prefix, output_type='z_score')
 
@@ -205,15 +211,17 @@ mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggr
 mf.apply_match_test(ins, time_broadcast=True)
 ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
 
-cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+# cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 
 # Write outputs
 #     ins.write(prefix, output_type='flags', uvf=uvf)
+print('Writing mask')
 ins.write(prefix, output_type='mask', sep='.', clobber=clobber)
 uvf.history += ins.history
 # "flags" are not helpful if no differencing was done
 if args.no_diff:
     ins.write(prefix, output_type='flags', sep='.', uvf=uvf, clobber=clobber)
+print('Writing match events')
 ins.write(prefix, output_type='match_events', sep='.', clobber=clobber)
 
 print('FINISHED FLAGGING!')
