@@ -262,8 +262,15 @@ if int(args.ITER) == 1 or int(args.CONV) == 1:
     
 
 if int(args.RAW) == 1:
-    if Nblts > 450000:
-        nreads = Nblts//450000+1
+    mini = UVData()
+    mini.read(raw_data[0])
+    Nblts = mini.Nblts
+    print(f'Raw files have {Nblts} blts per file')
+    Ntimes = len(raw_data)
+    Nblts *=Ntimes
+    del mini
+    if Nblts > 4500000:
+        nreads = Nblts//4500000+1
         timesperread = Ntimes//nreads
     else:
         nreads = 1
@@ -283,7 +290,7 @@ if int(args.RAW) == 1:
     
         file = f'{args.outdir}/{args.juliandate}_fhd_raw_data_{polname}_{n}.uvfits'
         print(f'Writing {file}\n')
-        rawData.write_uvfits(file,fix_autos=True)
+        rawData.write_uvfits(file,fix_autos=True,force_phase=True)
         del rawData
     
 if int(args.GAINS) == 1:
@@ -312,7 +319,7 @@ if int(args.GAINS) == 1:
             g.read_fhd_cal(cal_file=calfiles,obs_file=obsfiles,layout_file=layoutfiles,settings_file=settingsfiles,
                         run_check=False,run_check_acceptability=False)
             file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}_{ngainsets}.uvfits'
-            print('Writing Gains \n')
+            print(f'Writing Gains to {file} \n')
             g.write_calfits(file,clobber=True)
             ngainsets+=1
             calfiles = []
@@ -326,11 +333,13 @@ if int(args.GAINS) == 1:
 #                 run_check=False,run_check_acceptability=False)
     g.read_fhd_cal(cal_file=calfiles,obs_file=obsfiles,settings_file=settingsfiles,
                 run_check=False,run_check_acceptability=False)
+    print(np.unique(g.time_array))
+    print(np.diff(np.unique(g.time_array)))
     if ngainsets==0:
         file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}.uvfits'
     else:
         file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}_{ngainsets}.uvfits'
-    print('Writing Gains \n')
+    print(f'Writing Gains to {file} \n')
     g.write_calfits(file,clobber=True)
     del g
 

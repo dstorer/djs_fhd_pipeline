@@ -1329,7 +1329,8 @@ def plotCalVisAllBls(uv,datdir,jd=2459855,tmin=0,tmax=600,jd_label=False,savefig
             plt.show()
             plt.close()
             
-def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,outfig='',write_params=True):
+def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,outfig='',write_params=True,
+                     title=''):
     """
     Plots a histogram of baseline lengths, and shows where a particular baseline cut or cuts is.
     
@@ -1349,6 +1350,7 @@ def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,o
     outfig: String
     write_params: Boolean
     """
+    import scipy
     args = locals()
     if len(use_ants)>0:
         uv.select(use_ants=use_ants)
@@ -1367,6 +1369,8 @@ def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,o
     bl_cut_m=np.asarray(bl_cut)*wl
     for i,cut in enumerate(bl_cut):
         print(f'Baseline cut of {cut} lambda is at {np.round(bl_cut_m[i],1)} meters at {int(freq*1e-6)}MHz')
+        numOver = np.count_nonzero(lengths>=bl_cut_m[i])
+        print(f'Data has {numOver} baselines above the {np.around(bl_cut_m[i],1)}m cut')
     
     fig = plt.figure(figsize=(8,6))
     plt.hist(lengths,bins=nbins,histtype='step')
@@ -1377,6 +1381,7 @@ def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,o
     for i,cut in enumerate(bl_cut_m):
         plt.axvline(cut,linestyle='--',label=f'{np.round(bl_cut[i],1)} lambda cut',color=colors[i])
     plt.legend()
+    plt.title(title)
     if savefig:
         plt.savefig(outfig)
         if write_params:
@@ -1384,7 +1389,7 @@ def plotBlLengthHists(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,o
             utils.write_params_to_text(outfig,args,curr_func,curr_file,githash)
             
 def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=False,outfig='',
-                             write_params=True,suptitle=''):
+                             write_params=True,title='',xlim=None):
     """
     Plots a histogram of the number of baselines each antenna has that survive a certain baseline cut or cuts.
     
@@ -1403,8 +1408,9 @@ def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=
     savefig: Boolean
     Outfig: String
     write_params: Boolean
-    suptitle: String
+    title: String
     """
+    import scipy
     args = locals()
     if len(use_ants)>0:
         uv.select(use_ants=use_ants)
@@ -1453,10 +1459,13 @@ def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=
 #             ax[i].plot(hist)
             ax[i].set_xlabel('# Baselines above cut per antenna')
             ax[i].set_ylabel('Count')
-            ax[i].set_xlim((0,np.max(counts)+2))
+            if xlim == None:
+                ax[i].set_xlim((0,np.max(counts)+2))
+            else:
+                ax[i].set_xlim(xlim)
             ax[i].set_title(f'{np.round(cut,1)}m/{bl_cut[i]}lambda baseline cut')
             ax[i].set_ylim((0,ymax))
-    plt.suptitle(suptitle)
+    plt.suptitle(title)
     plt.tight_layout()
 #     plt.axvline(bl_cut_m,linestyle='--',color='k')
     if savefig:
@@ -1464,6 +1473,168 @@ def plotBlLengthHists_perAnt(uv,use_ants=[],freq=170,bl_cut=25,nbins=10,savefig=
         if write_params:
             curr_func = inspect.stack()[0][3]
             utils.write_params_to_text(outfig,args,curr_func,curr_file,githash)
+            
+def plot_antenna_positions(uv, badAnts=[], flaggedAnts={}, use_ants="all",hexsize=35,inc_outriggers=False):
+    """
+    Plots the positions of all antennas that have data, colored by node.
+
+    Parameters
+    ----------
+    uv: UVData object
+        Observation to extract antenna numbers and positions from
+    badAnts: List
+        A list of flagged or bad antennas. These will be outlined in black in the plot.
+    flaggedAnts: Dict
+        A dict of antennas flagged by ant_metrics with value corresponding to color in ant_metrics plot
+    use_ants: List or 'all'
+        List of antennas to include, or set to 'all' to include all antennas.
+
+    Returns:
+    ----------
+    None
+
+    """
+    from hera_mc import geo_sysdef
+
+    plt.figure(figsize=(12, 10))
+    nodes, antDict, inclNodes = utils.generate_nodeDict(uv)
+    if use_ants == "all":
+        use_ants = uv.get_ants()
+    N = len(inclNodes)
+    cmap = plt.get_cmap("tab20")
+    i = 0
+    ants = geo_sysdef.read_antennas()
+    nodes = geo_sysdef.read_nodes()
+    firstNode = True
+    for n, info in nodes.items():
+        firstAnt = True
+        if n > 9:
+            n = str(n)
+        else:
+            n = f"0{n}"
+        if n in inclNodes:
+            color = cmap(round(20 / N * i))
+            color = 'blue'
+            i += 1
+            for a in info["ants"]:
+                width = 0
+                widthf = 0
+                if a in badAnts:
+                    width = 2
+                if a in flaggedAnts.keys():
+                    widthf = 6
+                station = "HH{}".format(a)
+                try:
+                    this_ant = ants[station]
+                except KeyError:
+                    if inc_outriggers:
+                        try:
+                            station = "HA{}".format(a)
+                            this_ant = ants[station]
+                        except:
+                            try:
+                                station = "HB{}".format(a)
+                                this_ant = ants[station]
+                            except:
+                                continue
+                    else:
+                        continue
+                x = this_ant["E"]
+                y = this_ant["N"]
+                if a in use_ants:
+                    falpha = 0.7
+                else:
+                    falpha = 0.1
+                if firstAnt:
+                    if a in badAnts or a in flaggedAnts.keys():
+                        if falpha == 0.1:
+                            plt.plot(
+                                x,
+                                y,
+                                marker="h",
+                                markersize=hexsize,
+                                color=color,
+                                alpha=falpha,
+                                markeredgecolor="black",
+                                markeredgewidth=0,
+                            )
+                            plt.annotate(a, [x - 2, y-1])
+                            continue
+                        plt.plot(
+                            x,
+                            y,
+                            marker="h",
+                            markersize=hexsize,
+                            color=color,
+                            alpha=falpha,
+                            label=str(n),
+                            markeredgecolor="black",
+                            markeredgewidth=0,
+                        )
+                    else:
+                        if falpha == 0.1:
+                            plt.plot(
+                                x,
+                                y,
+                                marker="h",
+                                markersize=hexsize,
+                                color=color,
+                                alpha=falpha,
+                                markeredgecolor="black",
+                                markeredgewidth=0,
+                            )
+                            plt.annotate(a, [x - 2, y-1])
+                            continue
+                        plt.plot(
+                            x,
+                            y,
+                            marker="h",
+                            markersize=hexsize,
+                            color=color,
+                            alpha=falpha,
+                            label=str(n),
+                            markeredgecolor="black",
+                            markeredgewidth=width,
+                        )
+                    firstAnt = False
+                else:
+                    plt.plot(
+                        x,
+                        y,
+                        marker="h",
+                        markersize=hexsize,
+                        color=color,
+                        alpha=falpha,
+                        markeredgecolor="black",
+                        markeredgewidth=0,
+                    )
+                    if a in flaggedAnts.keys() and a in use_ants:
+                        plt.plot(
+                            x,
+                            y,
+                            marker="h",
+                            markersize=hexsize,
+                            color=color,
+                            markeredgecolor=flaggedAnts[a],
+                            markeredgewidth=widthf,
+                            markerfacecolor="None",
+                        )
+                    if a in badAnts and a in use_ants:
+                        plt.plot(
+                            x,
+                            y,
+                            marker="h",
+                            markersize=hexsize,
+                            color=color,
+                            markeredgecolor="black",
+                            markeredgewidth=width,
+                            markerfacecolor="None",
+                        )
+                plt.annotate(a, [x - 2, y-1])
+    plt.xlabel("East")
+    plt.ylabel("North")
+    plt.show()
+    plt.close()
     
 def get_ind(bls,ant1,ant2):
     ind = -1
