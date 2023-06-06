@@ -187,137 +187,202 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
             plt.show()
         plt.close()
 
-def make_frames_with_vis(fhd_path,uvfits_path,outdir,dirty_vis,model_vis,gains,raw_vis,flags,lsts,
-                         pol='XX',savefig=False,ant=99,lst_mask=False,jd=2459855,write_params=True):
+def make_frames_withVis(datadir,fhd_path,uvfits_path,outdir,jd,pol='XX',savefig=True,ra_range=9,dec_range=9,
+               nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',
+               bl=(62,333),gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
+               raw=None,uvc=None,cal=None,model=None,readVis=True,percentile=90,fontsize=16,
+               visPlotType='waterfall',reverse_ra=True,**kwargs):
+    # To compile frames into movie after this script runs, on terminal execute: 
+    # ffmpeg 2459911_wholeImage_XX.mp4 -r 5 -i 2459911_frame_XX_wholeImage_%3d.jpeg
+    from astropy.coordinates import Galactic
+    from astropy.coordinates import EarthLocation, AltAz, Angle
+    from astropy.coordinates import SkyCoord as sc
+    from astropy import units as u
+    from astropy.time import Time
+    import warnings
+    warnings.filterwarnings("ignore", message="Telescope location derived from obs lat/lon/alt values does not match the location in the layout file. Using the value from known_telescopes.")
+    
+#     print(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits')
     dirty_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits'))
     model_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Model_{pol}.fits'))
     residual_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Residual_{pol}.fits'))
     beam_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Beam_{pol}.fits'))
-    source_files = sorted(glob.glob(f'{fhd_path}/fhd_*/output_data/*Sources_{pol}.fits'))
+    uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
+    params_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_params.sav'))
+    obs_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_obs.sav'))
+    layout_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_layout.sav'))
+    dirty_vis_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*vis_{pol}.sav'))
+    flag_files = sorted(glob.glob(f'{fhd_path}/fhd_*/vis_data/*flags.sav'))
+    settings_files = sorted(glob.glob(f'{fhd_path}/fhd_*/metadata/*_settings.txt'))
+    
+    if readVis:
+        print('Reading visibilities')
+        uvc, raw, cal, model = plotVisAndGains(datadir,readOnly=True,jd=2459906, pol=pol)
+        print('Finished reading visibilities')
+    if cal is None or raw is None or model is None or uvc is None:
+        print('ERROR: Must either supply all of uvc, raw, cal, and model UVData objects, or set readVis=True.')
+    uvc.select(antenna_nums=[bl[0],bl[1]])
+    raw.select(bls=[bl])
+    cal.select(bls=[bl])
+    model.select(bls=[bl])
+    
     args = locals()
-#     uvfits_files = sorted(glob.glob(f'{uvfits_path}/*.uvfits'))
-    
-#     lst_blacklists = "0-1.3 2.5-4.3 6.5-9.1 10.6-11.5 11.9-14.3 16.3-1.3"
-    lst_blacklists = [(0,1.3),(2.5,4.3),(6.5,9.1),(10.6,11.5),(11.9,14.3),(16.3,24)]
-    
-    if lst_mask:
-        alpha_mask = np.ones(np.shape(raw_vis))
-        for l,lst in enumerate(np.multiply(lsts,3.819719)):
-            mask = False
-            for r in lst_blacklists:
-    #             print(r)
-                if r[0]<=lst<=r[1]:
-    #                 print(f'LST {lst} in range {r}')
-                    mask = True
-            if mask == True:
-                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)*0.4
-            else:
-                alpha_mask[l,:] = np.ones((1,np.shape(raw_vis)[1]),dtype=float)
-    else:
-        alpha_mask = 1
-            
     
     print(f'Creating images for {len(dirty_files)} files')
-    for ind in range(0,len(dirty_files)):
-#     for ind in range(10,11):
+    if nframes=='all':
+        nframes = len(dirty_files)
+    if plot_range=='all':
+        plot_range = [0,nframes]
+    if type(rawNorm)==list:
+        Nnorms=2
+    else:
+        Nnorms=1
+        rawNorm = [rawNorm]
+        gainNorm = [gainNorm]
+        calNorm = [calNorm]
+        modelNorm = [modelNorm]
+    for ind in range(plot_range[0],plot_range[1]):
         if ind%20==0:
             print(str(ind).zfill(3))
+        fhd_files = [layout_files[ind],obs_files[ind],params_files[ind],dirty_vis_files[ind],flag_files[ind],settings_files[ind]]
         uv = UVData()
-        uv.read(uvfits_path)
-        freqs = uv.freq_array[0]*1e-6
+        uv.read_fhd(fhd_files,read_data=False)
+        lst = uv.lst_array[0] * 3.819719 
         pos = [uv.phase_center_app_ra*57.2958,-31]
-        dec_range = [pos[1]-4.5,pos[1]+4.5]
-        ra_range=9
-#         print(f'Pos: {pos}')
-#         ra_range = [pos[0]-6,pos[0]+7.8]
-# #         ra_range = np.subtract(ra_range,360)
-# #         print(ra_range)
-#         if ra_range[0] > 180:
-#             ra_range[0] = ra_range[0]-360
-#         if ra_range[1] > 180:
-#             ra_range[1] = ra_range[1]-360
-# #         ra_range=None
-
-#         dec_range = [pos[1]-6.5,pos[1]+6.5]
-# #         dec_range=None
-# #         print('dec_range')
-# #         print(dec_range)
+        _dec_range = [pos[1]-dec_range/2,pos[1]+dec_range/2]
         prefix = f'{fhd_path}/output_data'
         color_scale=[-1763758,1972024]
         output_path = ''
         write_pixel_coordinates=False
         log_scale=False
-        hline_frac = (ind/len(dirty_files))
 
-        fig = plt.figure(figsize=(20,20))
-        fig.tight_layout(rect=(0, 0, 1, 0.95))
-        gs = fig.add_gridspec(5, 3,wspace=0.2,hspace=0.3)
-        #Beam
-        beam = plot_fits.load_image(beam_files[ind])
-        ax = fig.add_subplot(gs[0, 0])
-        im = plot_fits.plot_fits_image(beam, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=dec_range,title='Beam')
-#         #raw visibilities
-#         ax = fig.add_subplot(gs[0,1:])
-# #         raw_dat = np.ma.masked_where(flags[:,0,:,0]==True,np.abs(raw_vis))
-#         raw_dat = np.abs(raw_vis)
-#         im = plot_vis.plot_raw_vis(raw_dat,ax,ant,lsts,freqs,alpha_mask=alpha_mask)
-#         ax.axhline(hline_frac*len(raw_vis),color='c')
-        
-        #dirty image
+        fig = plt.figure(figsize=(20,24))
+        if Nnorms==1:
+            height_ratios=[1,1,0.7]
+        else:
+            height_ratios=[1,1,0.7,0.7]
+        gs = fig.add_gridspec(2+Nnorms,5,wspace=0.2,hspace=0.3,width_ratios=[1,1,1,1,0.08],
+                             height_ratios=height_ratios)
         data = plot_fits.load_image(dirty_files[ind])
-        ax = fig.add_subplot(gs[1, 0])
-#         print(ax)
+        
+        ax = fig.add_subplot(gs[0, 0:2])
         im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=dec_range,title='Dirty')
-        #dirty vis
-#         ax = fig.add_subplot(gs[1, 1:])
-#         im = plot_vis.plot_vis(dirty_vis,ax,(ant,ant),dtype='dirty',alpha_mask=alpha_mask)
-#         ax.axhline(hline_frac*len(dirty_vis['amp'][(ant,ant)]),color='c')
-        #model image
+                                 ra_range=ra_range,dec_range=_dec_range,title='Calibrated',fontsize=fontsize)
         data = plot_fits.load_image(model_files[ind])
-        ax = fig.add_subplot(gs[2, 0])
-#         print(ax)
+        ax = fig.add_subplot(gs[0, 2:4])
         im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=dec_range,title='Model')
-        #model vis
-#         ax = fig.add_subplot(gs[2, 1:])
-#         im = plot_vis.plot_vis(model_vis,ax,(ant,ant),dtype='model',alpha_mask=alpha_mask)
-#         ax.axhline(hline_frac*len(model_vis['amp'][(ant,ant)]),color='c')
-        #residual image
+                                 ra_range=ra_range,dec_range=_dec_range,title='Model',fontsize=fontsize)
         data = plot_fits.load_image(residual_files[ind])
-        ax = fig.add_subplot(gs[3, 0])
-#         print(ax)
-        im = plot_fits.plot_fits_image(data, ax, [0,1], output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=dec_range,title='Residual')
-        #gains
-#         ax = fig.add_subplot(gs[3, 1:])
-#         im = plot_vis.plot_gains(gains,ax,ant,set_alpha_mask=True)
-#         ax.axhline(hline_frac*len(gains[ant]['cal_array']),color='c')
-        #Source Image
-        data = plot_fits.load_image(source_files[ind])
-        ax = fig.add_subplot(gs[4, 0])
-#         print(ax)
-        im = plot_fits.plot_fits_image(data, ax, [0,10000000], output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=dec_range,title='Sources')
-        #sky map
+        vmin = np.percentile(data.signal_arr,5)
+        vmax = np.percentile(data.signal_arr,95)
+        ax = fig.add_subplot(gs[1, 0:2])
+        im = plot_fits.plot_fits_image(data, ax, [vmin,vmax], output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=_dec_range,title='Residual',fontsize=fontsize)
         sources = plot_fits.gather_source_list()
-        ax = fig.add_subplot(gs[4, 1:])
-        im = plot_fits.plot_sky_map(uv,ax,dec_pad=55,ra_pad=55,clip=False,sources=sources)
+        ax = fig.add_subplot(gs[1,2:4])
+        im = plot_fits.plot_sky_map(uv,ax,dec_pad=55,ra_pad=55,clip=False,sources=sources,fontsize=fontsize,
+                                   fwhm=ra_range,reverse_ra=reverse_ra)
+        
+        freqs = raw.freq_array[0]*1e-6
+        lstsRaw = raw.lst_array * 3.819719
+        lstsRaw = np.reshape(lstsRaw,(raw.Ntimes,-1))[:,0]
+        lstsFHD = uvc.lst_array * 3.819719
+        lstsFHD = np.reshape(lstsFHD,(uvc.Ntimes,-1))[:,0]
 
+        xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 5)]
+        xticklabels = [int(freqs[x]) for x in xticks]
+        yticksRaw = [int(i) for i in np.linspace(0, len(lstsRaw) - 1, 6)]
+        yticklabelsRaw = [np.around(lstsRaw[ytick], 1) for ytick in yticksRaw]
+        yticksFHD = [int(i) for i in np.linspace(0, len(lstsFHD) - 1, 6)]
+        yticklabelsFHD = [np.around(lstsFHD[ytick], 1) for ytick in yticksFHD]
+        
+        for n in range(Nnorms):
+            g0 = uvc.get_gains(bl[0])
+            g1 = uvc.get_gains(bl[1])
+            g0 = np.transpose((g0[:,:,0]))
+            g1 = np.transpose((g1[:,:,0]))
+            g = gainNorm[n](np.multiply(g0,np.conj(g1)))
+            r = rawNorm[n](raw.get_data((bl[0],bl[1],pol)))
+            c = calNorm[n](cal.get_data((bl[0],bl[1],pol)))
+            m = modelNorm[n](model.get_data((bl[0],bl[1],pol)))
+#             if ind==0:
+#                 print(f'Inds: {range(plot_range[0],plot_range[1])}')
+#                 print(f'Raw: {np.shape(r)}')
+#                 print(f'Cal: {np.shape(c)}')
+#                 print(f'Model: {np.shape(m)}')
+#                 print(f'Gains: {np.shape(g)}')
+
+            hline_r = np.argmin(abs(np.subtract(lstsRaw,lst)))
+            hline_g = np.argmin(abs(np.subtract(lstsFHD,lst)))
+
+            norms = [gainNorm[n],rawNorm[n],calNorm[n],modelNorm[n]]
+            dats = [g,r,c,m]
+            titles = [f'g{bl[0]} x g{bl[1]}*','Raw','Calibrated','Model']
+            hlines = [hline_g,hline_r,hline_r,hline_r]
+            ylims = [(0,12000),(0,120000),(0,18),(0,8)]
+            for i in [0,1,2,3]:
+                ax = fig.add_subplot(gs[2+n,i])
+                norm = norms[i]
+                if visPlotType=='waterfall':
+                    if norm == np.angle:
+                        vmin = -np.pi
+                        vmax = np.pi
+                        cmap = 'twilight'
+                    else:
+                        vmin = np.percentile(dats[i],100-percentile)
+                        vmax = np.percentile(dats[i],percentile)
+                        cmap = 'viridis'
+                    im = ax.imshow(dats[i],aspect='auto',interpolation='nearest',vmin=vmin,vmax=vmax,cmap=cmap)
+                    ax.set_title(titles[i],fontsize=fontsize)
+                    if i==0:
+                        ax.set_ylabel(f'Time (LST) \n {bl}: {gainNorm[n].__name__}',fontsize=fontsize)
+                        ax.set_yticks(yticksFHD)
+                        ax.set_yticklabels(yticklabelsFHD)
+                    else:
+                        ax.set_yticks([])
+                        ax.set_yticklabels([])
+                    if i==3:
+                        cax = fig.add_subplot(gs[2+n,4])
+                        fig.colorbar(im,cax=cax)
+                    ax.axhline(hlines[i],color='white',linewidth=2)
+                elif visPlotType=='line':
+                    ax.plot(dats[i][hlines[i],:])
+                    if norm==np.angle:
+                        ax.set_ylim((-np.pi,np.pi))
+                    elif norm==np.abs:
+                        ax.set_ylim(ylims[i])
+                    if i==0:
+                        ax.set_ylabel(f'{bl}: {gainNorm[n].__name__}',fontsize=fontsize)
+                else:
+                    print('ERROR: visPlotType must be either waterfall or line')
+                ax.set_xticks(xticks)
+                ax.set_xticklabels(xticklabels)
+                ax.set_xlabel('Freq (MHz)',fontsize=fontsize)
+        
         
         ax = plt.gca()
+        loc = EarthLocation.from_geocentric(*uv.telescope_location, unit='m')
+        obstime = Time(uv.time_array[len(uv.time_array)//2],format='jd',location=loc)
+        zenith = sc(Angle(0, unit='deg'),Angle(90,unit='deg'),frame='altaz',obstime=obstime,location=loc)
+        zenith = zenith.transform_to('icrs')
+        ra = zenith.ra.degree
+        plt.suptitle(f'LST {np.around(lst,2)}          RA {np.around(ra,2)}$^\circ$',fontsize=30,y=0.92)
+        
         if savefig == True:
-            print('saving')
-            outname = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}'
-            plt.savefig(f'{outname}.png',facecolor='white')
+            if len(outsuffix) > 0:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{outsuffix}_{str(ind).zfill(3)}.{file_ext}'
+            else:
+                outfig = f'{outdir}/{jd}_frame_{pol}_{str(ind).zfill(3)}.{file_ext}'
+            plt.savefig(outfig,facecolor='white')
             if write_params and ind==0:
-                curr_func = inspect.stack()[0][3]
-                utils.write_params_to_text(outname,args,curr_file=curr_file,
-                                           curr_func=curr_func,githash=githash)
+                utils.write_params_to_text(outfig,args,curr_func='make_frames',
+                       curr_file=curr_file,**kwargs)
         else:
             plt.show()
         plt.close()
+    return uvc, raw, cal, model
+
+
 
 def getCrossesPerAnt(uv,ant):
     bls = []
@@ -446,7 +511,42 @@ def plotPerAntCrossSums(datadir, jd, raw=None, pol='XX', antsPerPage=4, savefig=
         else:
             plt.show()
             plt.close()
+
             
+def plotSsins(datadir, jd, pol='XX',freq_range=[0,-1]):
+    fname = f'{datadir}/{jd}_ssins_flags_{pol}.hdf5'
+    f = UVFlag()
+    if os.path.isfile(fname):
+        f.read(fname)
+    else:
+        fnames = sorted(glob.glob(f'{datadir}/*flags.h5'))
+        f.read(fnames)
+    freqs = f.freq_array
+    if not (freq_range[0]==0 and freq_range[1]==-1):
+        minind = np.argmin(abs(np.subtract(freqs*1e-6,freq_range[0])))
+        maxind = np.argmin(abs(np.subtract(freqs*1e-6,freq_range[-1])))
+        freq_range = [minind,maxind]
+    
+    freqs = freqs[freq_range[0]:freq_range[1]]
+    f.select(frequencies=freqs)
+    
+    fig, ax = plt.subplots(1,1,figsize=(12,10))
+    im = plt.imshow(f.flag_array[:,:,0],aspect='auto',interpolation='nearest')
+    fig.colorbar(im)
+    
+    freqs *= 1e-6
+    lsts = np.reshape(f.lst_array* 3.819719,(f.Ntimes,-1))[:,0]
+    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 5)]
+    xticklabels = [int(freqs[x]) for x in xticks]
+    yticks = [int(i) for i in np.linspace(0, len(lsts) - 1, 6)]
+    yticklabels = [np.around(lsts[ytick], 1) for ytick in yticks]
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    plt.xlabel('Freq')
+    plt.ylabel('Time (LST)')
+    
     
 def plotVisAndDelay(datadir, jd, calFull = None, rawFull = None, modelFull = None, gainsFull = None,
                     gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
@@ -1048,6 +1148,7 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
     
     if uvc is None:
         gf = sorted(glob.glob(f'{datadir}/{jd}_fhd_gains_{pol}*'))
+        print('Reading Gains')
         if len(gf)<3:
             dirlist = f'{datadir}/{jd}_fhd_dirlist.txt'
             calfiles, obsfiles, layoutfiles, settingsfiles = getFhdGainDirs(dirlist)
@@ -1057,17 +1158,23 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
         elif len(gf)==1:
             uvc = UVCal()
             uvc.read_calfits(gf[0])
-        
+            dirlist=None
+        else:
+            uvc = UVCal()
+            uvc.read_calfits(gf)
+            dirlist=None
     else:
         dirlist=None
     if raw is None:
+        print('Reading Raw')
         raw = UVData()
-        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}_0.uvfits'
         raw.read(raw_file)
         raw.file_name = raw_file
     else:
         raw_file=None
     if cal is None:
+        print('Reading Cal')
         cal = UVData()
         cal_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}.uvfits'
         cal.read(cal_file)
@@ -1075,15 +1182,46 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
     else:
         cal_file=None
     if model is None:
+        print('Reading Model')
         model = UVData()
         model_file = f'{datadir}/{jd}_fhd_model_data_{pol}.uvfits'
         model.read(model_file)
         model.file_name=model_file
     else:
         model_file=None
+    print('Before select:')
+    print(f'Raw has LSTS {raw.lst_array[0]* 3.819719} to {raw.lst_array[-1]* 3.819719}')
+    print(f'Model has LSTS {model.lst_array[0]* 3.819719} to {model.lst_array[-1]* 3.819719}')
+    print(f'Cal has LSTS {cal.lst_array[0]* 3.819719} to {cal.lst_array[-1]* 3.819719}')
+    print(f'Gains has LSTS {uvc.lst_array[0]* 3.819719} to {uvc.lst_array[-1]* 3.819719}')
+    
+#     print('Cal times:')
+#     print(np.unique(cal.time_array))
+#     print('Raw times:')
+#     print(np.unique(raw.time_array))
     
     times = np.unique(cal.time_array)
+    rawtimes = np.unique(raw.time_array)
+    gaintimes = np.unique(uvc.time_array)
+    if times[0]<rawtimes[0]:
+        ind = np.argmin(abs(np.subtract(times,rawtimes[0])))
+        times = times[ind:]
+    if times[-1]>rawtimes[-1]:
+        ind = np.argmin(abs(np.subtract(times,rawtimes[-1])))
+        times = times[0:ind]
+    gmin = np.argmin(abs(np.subtract(gaintimes,times[0])))
+    gmax = np.argmin(abs(np.subtract(gaintimes,times[-1])))
     raw.select(times=times)
+    model.select(times=times)
+    cal.select(times=times)
+    uvc.select(times=gaintimes[gmin:gmax])
+    print('After select:')
+    print(f'Raw has LSTS {raw.lst_array[0]* 3.819719} to {raw.lst_array[-1]* 3.819719}')
+    print(f'Model has LSTS {model.lst_array[0]* 3.819719} to {model.lst_array[-1]* 3.819719}')
+    print(f'Cal has LSTS {cal.lst_array[0]* 3.819719} to {cal.lst_array[-1]* 3.819719}')
+    print(f'Gains has LSTS {uvc.lst_array[0]* 3.819719} to {uvc.lst_array[-1]* 3.819719}')
+    if readOnly:
+        return uvc, raw, cal, model
     
     freqs = raw.freq_array[0]*1e-6
     lstsRaw = raw.lst_array * 3.819719
@@ -1110,7 +1248,12 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
         allbls = allbls[leninds]
         allbls = np.flip(allbls)
     if NblsPlot != 'all':
-        allbls = allbls[0:NblsPlot] 
+        if NblsPlot>=1:
+                allbls = allbls[0:NblsPlot]
+        else:
+            inds = np.linspace(0,len(allbls)-1,int(len(allbls)*NblsPlot))
+            allbls = [allbls[int(i)] for i in inds]
+            
     nbls = len(allbls)
     nplots = nbls//nsplit+1
     for n in range(nplots):
@@ -1121,6 +1264,8 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
         fig = plt.figure(figsize=(16,4*nsplit))
         gs = fig.add_gridspec(nsplit,5,width_ratios=[1,1,1,1,1])
         lengths = getBaselineLength(raw,bls)
+        if len(lengths)==0:
+            continue
         maxlength = np.max(lengths)
         for b,bl in enumerate(bls):
             if bl[0]==183 or bl[1]==183 or bl[0]==5 or bl[1]==5:
@@ -1145,9 +1290,9 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
                 im = ax.imshow(gains[i],aspect='auto',cmap=cmap,vmin=vmin,vmax=vmax,
                                  interpolation='nearest')
                 ax.set_title(f'ant {bl[i]}',fontsize=14)
-            r = rawNorm(raw.get_data((bl[0],bl[1],-5)))
-            c = calNorm(cal.get_data((bl[0],bl[1],-5)))
-            m = modelNorm(model.get_data((bl[0],bl[1],-5)))
+            r = rawNorm(raw.get_data((bl[0],bl[1],pol)))
+            c = calNorm(cal.get_data((bl[0],bl[1],pol)))
+            m = modelNorm(model.get_data((bl[0],bl[1],pol)))
             norms = [rawNorm,calNorm,modelNorm]
             dats = [r,c,m]
             for i in [0,1,2]:
@@ -1167,6 +1312,8 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
         for i in range(np.shape(axes)[0]):
             for j in range(np.shape(axes)[1]):
                 ax = axes[i,j]
+                if ax is None:
+                    continue
                 ax.set_xticks(xticks)
                 ax.set_xticklabels(xticklabels)
                 a1 = bls[i][0]

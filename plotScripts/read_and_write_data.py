@@ -200,11 +200,14 @@ for i,flist in enumerate(fhd_file_array):
 # Nfreqs = len(freqs)
 # Npols = raw.Npols
 # antpairs = np.asarray(raw.get_antpairs())
-# if int(args.BLS) == 1:
-#     print('Writing baseline array')
-#     file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
-#     with open(file, 'wb') as f:
-#         np.save(f,antpairs)
+if int(args.BLS) == 1:
+    print('Writing baseline array')
+    file = f'{args.outdir}/{args.juliandate}_bl_array.npy'
+    raw = UVData()
+    raw.read(raw_data[0])
+    antpairs=np.asarray(raw.get_antpairs())
+    with open(file, 'wb') as f:
+        np.save(f,antpairs)
 # # raw.write_uvh5('2459855_raw_metadata.uvh5',clobber=True)
 # del raw, calData
 
@@ -264,17 +267,18 @@ if int(args.ITER) == 1 or int(args.CONV) == 1:
 if int(args.RAW) == 1:
     mini = UVData()
     mini.read(raw_data[0])
-    Nblts = mini.Nblts
-    print(f'Raw files have {Nblts} blts per file')
+    Nblts_per = mini.Nblts
     Ntimes = len(raw_data)
-    Nblts *=Ntimes
+    Nblts = Nblts_per * Ntimes
+    print(f'Raw files have {Nblts_per} blts per file, for a total of {Nblts} blts in the whole night')
     del mini
-    if Nblts > 4500000:
-        nreads = Nblts//4500000+1
+    if Nblts > 4000000:
+        nreads = Nblts//4000000+1
         timesperread = Ntimes//nreads
     else:
         nreads = 1
         timesperread = Ntimes
+    print(f'Writing to {nreads} separate file(s)')
     for n in range(nreads):
         rawData = UVData()
         stopind = n*timesperread + timesperread
@@ -346,13 +350,33 @@ if int(args.GAINS) == 1:
 if int(args.CAL) == 1:
     print('Reading calibrated data') 
     nobs = int(args.nobs)
-    calData = UVData()
-    calData.read(fhd_file_array,use_model=False,ignore_name=True,polarizations=pol)
-#     calData.select(polarizations=pol)
-    print('Writing Calibrated Data Array \n')
-    file = f'{args.outdir}/{args.juliandate}_fhd_calibrated_data_{polname}.uvfits'
-    calData.write_uvfits(file,fix_autos=True)
-    del calData
+    mini = UVData()
+    mini.read(fhd_file_array[0])
+    Nblts_per = mini.Nblts
+    Ntimes = len(fhd_file_array)
+    Nblts = Nblts_per * Ntimes
+    print(f'Calibrated files have {Nblts_per} blts per file, for a total of {Nblts} blts in the whole night')
+    del mini
+    if Nblts > 4000000:
+        nreads = Nblts//4000000+1
+        timesperread = Ntimes//nreads
+    else:
+        nreads = 1
+        timesperread = Ntimes
+    print(f'Writing to {nreads} separate file(s)')
+    for n in range(nreads):
+        calData = UVData()
+        stopind = n*timesperread + timesperread
+        startind = n*timesperread
+        if stopind >= Ntimes:
+            stopind = Ntimes-1
+        print(f'Reading calibrated data, iteration {n+1} of {nreads}')
+        print(f'Reading files {fhd_file_array[startind]} to {fhd_file_array[stopind]}')
+        calData.read(fhd_file_array[startind:stopind],use_model=False,ignore_name=True,polarizations=pol)
+        print(f'Writing Calibrated Data Array, iteration {n+1} of {nreads} \n')
+        file = f'{args.outdir}/{args.juliandate}_fhd_calibrated_data_{polname}_{n}.uvfits'
+        calData.write_uvfits(file,fix_autos=True)
+        del calData
 
 if int(args.MODEL) == 1:
     print('Reading model data') 

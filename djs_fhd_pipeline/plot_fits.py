@@ -219,7 +219,7 @@ def difference_images(image1, image2):
 def plot_fits_image(
     fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,
     colorbar_label='Flux Density (Jy/beam)', plot_grid=True,
-    xlabel='RA (deg.)', ylabel='Dec. (deg.)'
+    xlabel='RA (deg.)', ylabel='Dec. (deg.)',fontsize=12
 ):
 
 #     ra_range = [45,75]
@@ -253,7 +253,7 @@ def plot_fits_image(
 #     ax.set_facecolor('black')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    ax.set_title(title,fontsize=fontsize)
     if plot_grid:
         ax.grid(which='both', zorder=10, lw=0.5)
     cbar = plt.colorbar(im,ax=ax,pad=0.01)
@@ -278,7 +278,8 @@ def plot_fits_image(
 #             np.savetxt(f, coords, fmt=['%f','%f'], header='RA        DEC')
     return im
 
-def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sources=[]):
+def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sources=[],fontsize=12,
+                reverse_ra=False):
     map_path = f'/lustre/aoc/projects/hera/dstorer/Setup/djsScripts/Scripts/haslam408_dsds_Remazeilles2014.fits'
     hdulist = fits.open(map_path)
 
@@ -298,10 +299,14 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     zenith_end = zenith_end.transform_to('icrs')
     lst_start = obstime_start.sidereal_time('mean').hour
     lst_end = obstime_end.sidereal_time('mean').hour
-    start_coords = [zenith_start.ra.degree,zenith_start.dec.degree]
+    if reverse_ra:
+        start_coords = [zenith_end.ra.degree,zenith_start.dec.degree]
+        end_coords = [zenith_start.ra.degree,zenith_end.dec.degree]
+    else:
+        start_coords = [zenith_start.ra.degree,zenith_start.dec.degree]
+        end_coords = [zenith_end.ra.degree,zenith_end.dec.degree]
     if start_coords[0] > 180:
         start_coords[0] = start_coords[0] - 360
-    end_coords = [zenith_end.ra.degree,zenith_end.dec.degree]
     if end_coords[0] > 180:
         end_coords[0] = end_coords[0] - 360
     
@@ -314,13 +319,19 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     else:
         ra = np.linspace(-180,180,nx)
         dec = np.linspace(-90,zenith_start.dec.degree+90,ny)
+    if reverse_ra:
+        ra = np.flip(ra)
     ra_grid, dec_grid = np.meshgrid(ra * u.deg, dec * u.deg)
     
     #Create alpha grid
     alphas = np.ones(ra_grid.shape)
     alphas = np.multiply(alphas,0.5)
-    ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]-fwhm/2)))
-    ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]+fwhm/2)))
+    if reverse_ra:
+        ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]+fwhm/2)))
+        ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]-fwhm/2)))
+    else:
+        ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]-fwhm/2)))
+        ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]+fwhm/2)))
     dec_min = np.argmin(np.abs(np.subtract(dec,start_coords[1]-fwhm/2)))
     dec_max = np.argmin(np.abs(np.subtract(dec,end_coords[1]+fwhm/2)))
     alphas[dec_min:dec_max, ra_min:ra_max] = 1
@@ -332,8 +343,14 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     temperature = healpy.read_map(map_path)
     tmap = hp.interpolate_bilinear_skycoord(coords, temperature)
     tmap = tmap.reshape((ny, nx))
+#     if reverse_ra is False:
     tmap = np.flip(tmap,axis=1)
     alphas = np.flip(alphas,axis=1)
+#     print(f'fwhm: {fwhm}')
+#     print(f'Start coords: {start_coords}')
+#     print(f'End coords: {end_coords}')
+#     print(np.shape(alphas))
+#     print(f'ra_min: {ra_min}, ra_max: {ra_max}')
 
     # Make a plot of the interpolated temperatures
 #     plt.figure(figsize=(12, 7))
@@ -346,11 +363,11 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     ax.vlines(x=start_coords[0],ymin=start_coords[1],ymax=dec[-1],linestyles='dashed')
     ax.vlines(x=end_coords[0],ymin=start_coords[1],ymax=dec[-1],linestyles='dashed')
     ax.annotate(np.around(lst_start,2),xy=(start_coords[0],dec[-1]),xytext=(0,8),
-                 fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
+                 fontsize=fontsize,xycoords='data',textcoords='offset points',horizontalalignment='center')
 #     plt.annotate(np.around(lst_end,2),xy=(end_coords[0],dec[-1]),xytext=(0,8),
 #                  fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
     ax.annotate('LST (hours)',xy=(np.average([start_coords[0],end_coords[0]]),dec[-1]),
-                xytext=(0,22),fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
+                xytext=(0,22),fontsize=fontsize,xycoords='data',textcoords='offset points',horizontalalignment='center')
     for s in sources:
         if s[1] > dec[0] and s[1] < dec[-1]:
             if s[0] > 180:
@@ -362,7 +379,10 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
             else:
                 ax.scatter(s[0],s[1],c='k',s=6)
                 if len(s[2]) > 0:
-                    ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+                    if reverse_ra:
+                        ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                    else:
+                        ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
 #     plt.show()
 #     plt.close()
 #     hdulist.close()
