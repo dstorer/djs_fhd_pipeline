@@ -363,28 +363,31 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
 #     hdulist.close()
     return im
 
-def gather_source_list():
+def gather_source_list(inc_flux=False):
     sources = []
-    sources.append((50.6750,-37.2083,'Fornax A'))
-    sources.append((201.3667,-43.0192,'Cen A'))
+    sources.append((50.6750,-37.2083,'Fornax A',541.77))
+    sources.append((201.3667,-43.0192,'Cen A',200))
     # sources.append((83.6333,22.0144,'Taurus A'))
-    sources.append((252.7833,4.9925,'Hercules A'))
-    sources.append((139.5250,-12.0947,'Hydra A'))
-    sources.append((79.9583,-45.7789,'Pictor A'))
-    sources.append((187.7042,12.3911,'Virgo A'))
-    sources.append((83.8208,-59.3897,'Orion A'))
-    sources.append((80.8958,-69.7561,'LMC'))
-    sources.append((13.1875,-72.8286,'SMC'))
-    sources.append((201.3667,-43.0192,'Cen A'))
-    sources.append((83.6333,20.0144,'Crab Pulsar'))
-    sources.append((128.8375,-45.1764,'Vela SNR'))
+    sources.append((252.7833,4.9925,'Hercules A',279.36))
+    sources.append((139.5250,-12.0947,'Hydra A',226.32))
+    sources.append((79.9583,-45.7789,'Pictor A',271.16))
+    sources.append((187.7042,12.3911,'Virgo A',372.73))
+    sources.append((83.8208,-59.3897,'Orion A',200))
+    sources.append((80.8958,-69.7561,'LMC',200))
+    sources.append((13.1875,-72.8286,'SMC',200))
+    sources.append((201.3667,-43.0192,'Cen A',200))
+    sources.append((83.6333,20.0144,'Crab Pulsar',200))
+    sources.append((128.8375,-45.1764,'Vela SNR',200))
     cat_path = f'/lustre/aoc/projects/hera/dstorer/Setup/djsScripts/Scripts/G4Jy_catalog.tsv'
     cat = open(cat_path)
     f = csv.reader(cat,delimiter='\n')
     for row in f:
         if len(row)>0 and row[0][0]=='J':
             s = row[0].split(';')
-            tup = (float(s[1]),float(s[2]),'')
+            if inc_flux:
+                tup = (float(s[1]),float(s[2]),'',float(s[3]))
+            else:
+                tup = (float(s[1]),float(s[2]),'')
             sources.append(tup)
     return sources
 

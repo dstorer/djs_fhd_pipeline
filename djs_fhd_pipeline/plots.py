@@ -65,6 +65,48 @@ def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=
         return raw, cal, model, gains, extraCal
     else:
         return raw, cal, model, gains
+    
+def trimVisTimes(raw,cal,model,uvc,printTimes=False):
+    if printTimes:
+        print('Before select:')
+        print(f'Raw has LSTS {raw.lst_array[0]* 3.819719} to {raw.lst_array[-1]* 3.819719}')
+        if model != None:
+            print(f'Model has LSTS {model.lst_array[0]* 3.819719} to {model.lst_array[-1]* 3.819719}')
+        print(f'Cal has LSTS {cal.lst_array[0]* 3.819719} to {cal.lst_array[-1]* 3.819719}')
+        print(f'Gains has LSTS {uvc.lst_array[0]* 3.819719} to {uvc.lst_array[-1]* 3.819719}')
+    
+    times = np.unique(cal.time_array)
+    rawtimes = np.unique(raw.time_array)
+    gaintimes = np.unique(uvc.time_array)
+    
+    mintime = np.max([times[0],rawtimes[0],gaintimes[0]])
+    maxtime = np.min([times[-1],rawtimes[-1],gaintimes[-1]])
+        
+    minind = np.argmin(abs(np.subtract(times,mintime)))
+    maxind = np.argmin(abs(np.subtract(times,maxtime)))
+    times = times[minind:maxind]
+    
+    minind = np.argmin(abs(np.subtract(rawtimes,mintime)))
+    maxind = np.argmin(abs(np.subtract(rawtimes,maxtime)))
+    rawtimes = rawtimes[minind:maxind]
+    
+    minind = np.argmin(abs(np.subtract(gaintimes,mintime)))
+    maxind = np.argmin(abs(np.subtract(gaintimes,maxtime)))
+    gaintimes = gaintimes[minind:maxind]
+    
+    raw.select(times=times)
+    if model != None:
+        model.select(times=times)
+    cal.select(times=times)
+    uvc.select(times=gaintimes)
+    if printTimes:
+        print('After select:')
+        print(f'Raw has LSTS {raw.lst_array[0]* 3.819719} to {raw.lst_array[-1]* 3.819719}')
+        if model != None:
+            print(f'Model has LSTS {model.lst_array[0]* 3.819719} to {model.lst_array[-1]* 3.819719}')
+        print(f'Cal has LSTS {cal.lst_array[0]* 3.819719} to {cal.lst_array[-1]* 3.819719}')
+        print(f'Gains has LSTS {uvc.lst_array[0]* 3.819719} to {uvc.lst_array[-1]* 3.819719}')
+    return uvc, raw, cal, model
 
 def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, write_params=True, file_ext='jpeg',
            hexbin=True, blx=[], bly=[]):

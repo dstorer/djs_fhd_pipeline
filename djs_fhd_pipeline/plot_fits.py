@@ -51,11 +51,6 @@ class ImageFromFits:
         self.dec_axis = dec_axis
 
     def limit_data_range(self, ra_range=None, dec_range=None):
-#         print('ra_range:')
-#         print(ra_range)
-#         print('self.ra_axis:')
-#         print(f'{self.ra_axis[0]} - {self.ra_axis[-1]}')
-        
         if ra_range is not None:
             if type(ra_range)==int:
                 ramid = self.ra_axis[len(self.ra_axis)//2]
@@ -70,21 +65,20 @@ class ImageFromFits:
         else:
             use_ra_inds = range(len(self.ra_axis))
             ra_range = [self.ra_axis[0],self.ra_axis[1]]
-#             print('use_ra_inds:' + use_ra_inds)
-#         print('use_ra_inds')
-#         print(f'{use_ra_inds[0]} - {use_ra_inds[-1]}')
         if dec_range is not None:
-#             print(dec_range[0])
-#             print(dec_range[1])
-            use_dec_inds = [i for i in range(len(self.dec_axis))
-                            if dec_range[0] < self.dec_axis[i] < dec_range[1]
-                            ]
-#             print(use_dec_inds)
+            if type(dec_range)==int:
+                decmid = self.dec_axis[len(self.dec_axis)//2]
+                decmin = np.argmin(abs(np.subtract(self.dec_axis,decmid - dec_range/2)))
+                decmax = np.argmin(abs(np.subtract(self.dec_axis,decmid + dec_range/2)))
+                use_dec_inds = [i for i in range(decmin,decmax)]
+                dec_range = [self.dec_axis[decmin],self.dec_axis[decmax]]
+            else:
+                use_dec_inds = [i for i in range(len(self.dec_axis))
+                                if dec_range[0] < self.dec_axis[i] < dec_range[1]
+                                ]
         else:
             use_dec_inds = range(len(self.dec_axis))
             print('use_dec_inds:' + use_dec_inds)
-#         print(use_ra_inds)
-#         print(use_dec_inds)
         self.signal_arr = self.signal_arr[
             use_dec_inds[0]:use_dec_inds[-1]+1,
             use_ra_inds[0]:use_ra_inds[-1]+1
@@ -217,7 +211,7 @@ def difference_images(image1, image2):
 
 
 def plot_fits_image(
-    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,
+    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,gradient=False,
     colorbar_label='Flux Density (Jy/beam)', plot_grid=True,
     xlabel='RA (deg.)', ylabel='Dec. (deg.)',fontsize=12
 ):
@@ -239,6 +233,8 @@ def plot_fits_image(
         colorbar_label = 'log(Flux Density)'
     else:
         data = fits_image.signal_arr
+    if gradient:
+        data = np.gradient(data)
     im = ax.imshow(
         data, origin='lower', interpolation='none',
         cmap='Greys_r',
@@ -388,28 +384,31 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
 #     hdulist.close()
     return im
 
-def gather_source_list():
+def gather_source_list(inc_flux=False):
     sources = []
-    sources.append((50.6750,-37.2083,'Fornax A'))
-    sources.append((201.3667,-43.0192,'Cen A'))
+    sources.append((50.6750,-37.2083,'Fornax A',541.77))
+    sources.append((201.3667,-43.0192,'Cen A',200))
     # sources.append((83.6333,22.0144,'Taurus A'))
-    sources.append((252.7833,4.9925,'Hercules A'))
-    sources.append((139.5250,-12.0947,'Hydra A'))
-    sources.append((79.9583,-45.7789,'Pictor A'))
-    sources.append((187.7042,12.3911,'Virgo A'))
-    sources.append((83.8208,-59.3897,'Orion A'))
-    sources.append((80.8958,-69.7561,'LMC'))
-    sources.append((13.1875,-72.8286,'SMC'))
-    sources.append((201.3667,-43.0192,'Cen A'))
-    sources.append((83.6333,20.0144,'Crab Pulsar'))
-    sources.append((128.8375,-45.1764,'Vela SNR'))
+    sources.append((252.7833,4.9925,'Hercules A',279.36))
+    sources.append((139.5250,-12.0947,'Hydra A',226.32))
+    sources.append((79.9583,-45.7789,'Pictor A',271.16))
+    sources.append((187.7042,12.3911,'Virgo A',372.73))
+    sources.append((83.8208,-59.3897,'Orion A',200))
+    sources.append((80.8958,-69.7561,'LMC',200))
+    sources.append((13.1875,-72.8286,'SMC',200))
+    sources.append((201.3667,-43.0192,'Cen A',200))
+    sources.append((83.6333,20.0144,'Crab Pulsar',200))
+    sources.append((128.8375,-45.1764,'Vela SNR',200))
     cat_path = f'/lustre/aoc/projects/hera/dstorer/Setup/djsScripts/Scripts/G4Jy_catalog.tsv'
     cat = open(cat_path)
     f = csv.reader(cat,delimiter='\n')
     for row in f:
         if len(row)>0 and row[0][0]=='J':
             s = row[0].split(';')
-            tup = (float(s[1]),float(s[2]),'')
+            if inc_flux:
+                tup = (float(s[1]),float(s[2]),'',float(s[3]))
+            else:
+                tup = (float(s[1]),float(s[2]),'')
             sources.append(tup)
     return sources
 
