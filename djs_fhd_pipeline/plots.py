@@ -164,7 +164,9 @@ def plot_uv(uv, freq_synthesis=True, savefig=False, outfig='', nb_path = None, w
     return blx,bly
 
 def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_range=9,dec_range=9,
-               nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',**kwargs):
+               nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',
+               reverse_ra=False,fontsize=16,plotBeam=False,beam_color_scale=[0,0.005],
+               beamGradient=False,fieldType='streamplot',**kwargs):
     # To compile frames into movie after this script runs, on terminal execute: 
     # ffmpeg 2459911_wholeImage_XX.mp4 -r 5 -i 2459911_frame_XX_wholeImage_%3d.jpeg
     print(f'{fhd_path}/fhd_*/output_data/*Dirty_{pol}.fits')
@@ -202,17 +204,72 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
         fig, axes = plt.subplots(2,2,figsize=(20,20))
         data = plot_fits.load_image(dirty_files[ind])
         im = plot_fits.plot_fits_image(data, axes[0][0], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=_dec_range,title='Calibrated')
+                                 ra_range=ra_range,dec_range=_dec_range,title='Calibrated',fontsize=fontsize)
         data = plot_fits.load_image(model_files[ind])
         im = plot_fits.plot_fits_image(data, axes[0][1], color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=_dec_range,title='Model')
+                                 ra_range=ra_range,dec_range=_dec_range,title='Model',fontsize=fontsize)
         data = plot_fits.load_image(residual_files[ind])
         vmin = np.percentile(data.signal_arr,5)
         vmax = np.percentile(data.signal_arr,95)
         im = plot_fits.plot_fits_image(data, axes[1][0], [vmin,vmax], output_path, prefix, write_pixel_coordinates, log_scale,
-                                 ra_range=ra_range,dec_range=_dec_range,title='Residual')
+                                 ra_range=ra_range,dec_range=_dec_range,title='Residual',fontsize=fontsize)
         sources = plot_fits.gather_source_list()
-        im = plot_fits.plot_sky_map(uv,axes[1][1],dec_pad=55,ra_pad=55,clip=False,sources=sources)
+        if plotBeam:
+            beamFile = beam_files[ind]
+            data = plot_fits.load_image(beamFile)
+            if beamGradient:
+                if fieldType == 'streamplot':
+                    im = ax.imshow(np.ones(np.shape(data.signal_arr))*1e10,vmin=0,vmax=1,cmap='Greys_r',
+                                  extent=[xlim[0],xlim[1],ylim[0],ylim[1]])
+                    signal_arr = np.gradient(data.signal_arr)
+                    x,y = np.meshgrid(data.ra_axis,data.dec_axis)
+                    ax.streamplot(x,y,signal_arr[0],signal_arr[1])
+                    cbar = plt.colorbar(im,ax=ax,pad=0.0)
+                    cbar.set_ticks([])
+                    cbar.outline.set_visible(False)
+                    ax.set_xlim(xlim)
+                    ax.set_ylim(ylim)
+                    ax.axis('equal')
+                    ax.grid(which='both', zorder=10, lw=0.5)
+                    ax.margins(0)
+                elif fieldType == 'quiver':
+                    im = ax.imshow(np.ones(np.shape(data.signal_arr))*1e10,vmin=0,vmax=1,cmap='Greys_r',
+                                  extent=[xlim[0],xlim[1],ylim[0],ylim[1]])
+                    signal_arr = np.gradient(data.signal_arr)
+                    x,y = np.meshgrid(data.ra_axis,data.dec_axis)
+                    ax.quiver(x,y,signal_arr[0],signal_arr[1],scale=100)
+                    cbar = plt.colorbar(im,ax=ax,pad=0.0)
+                    cbar.set_ticks([])
+                    cbar.outline.set_visible(False)
+                    ax.set_xlim(xlim)
+                    ax.set_ylim(ylim)
+                    ax.axis('equal')
+                    ax.grid(which='both', zorder=10, lw=0.5)
+                    ax.margins(0)
+            else:
+                im = plot_fits.plot_fits_image(data, ax, beam_color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                         ra_range=ra_range,dec_range=dec_range,title='Beam',fontsize=fontsize)
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+            for s in sources:
+                if s[1] > ylim[0] and s[1] < ylim[1]:
+                    if s[0] > 180:
+                        s = (s[0]-360,s[1],s[2],s[3])
+                    if s[0] > xlim[0] and s[0] < xlim[1]:
+                        if s[2] == 'LMC' or s[2] == 'SMC':
+                            ax.annotate(s[2],xy=(s[0],s[1]),xycoords='data',fontsize=8,xytext=(20,-20),
+                                         textcoords='offset points',arrowprops=dict(facecolor='red', shrink=2,width=1,
+                                                                                    headwidth=4))
+                        else:
+                            ax.scatter(s[0],s[1],c='r',s=s[3])
+                            if len(s[2]) > 0:
+                                if reverse_ra:
+                                    ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                                else:
+                                    ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+        else:
+            im = plot_fits.plot_sky_map(uv,ax,dec_pad=55,ra_pad=55,clip=False,sources=sources,fontsize=fontsize,
+                                       fwhm=ra_range,reverse_ra=reverse_ra)
         ax = plt.gca()
         plt.suptitle(f'LST {np.around(lst,2)}',fontsize=30,y=0.92)
         if savefig == True:
@@ -229,6 +286,36 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
             plt.show()
         plt.close()
 
+def plotBeam(fhd_dir,pol='XX',color_scale=[-1763758,1972024],output_path='',prefix='beam',
+             write_pixel_coordinates=False,log_scale=False,ra_range=40,dec_range=40,fontsize=16):
+    from djs_fhd_pipeline import plot_fits, plot_deconvolution
+    beamFile = glob.glob(f'{fhd_dir}/output_data/*_Beam_{pol}.fits')[0]
+    data = plot_fits.load_image(beamFile)
+    fig, ax = plt.subplots(1,1,figsize=(12,12))
+#     _dec_range = [pos[1]-dec_range/2,pos[1]+dec_range/2]
+    im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Beam',fontsize=fontsize)
+    sources = plot_fits.gather_source_list()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    print(xlim)
+    for s in sources:
+        if s[1] > ylim[0] and s[1] < ylim[1]:
+            if s[0] > xlim[0] and s[0] < xlim[1]:
+                if s[0] > 180:
+                    s = (s[0]-360,s[1],s[2])
+                if s[2] == 'LMC' or s[2] == 'SMC':
+                    ax.annotate(s[2],xy=(s[0],s[1]),xycoords='data',fontsize=8,xytext=(20,-20),
+                                 textcoords='offset points',arrowprops=dict(facecolor='red', shrink=2,width=1,
+                                                                            headwidth=4))
+                else:
+                    ax.scatter(s[0],s[1],c='r',s=10)
+                    if len(s[2]) > 0:
+                        if reverse_ra:
+                            ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                        else:
+                            ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+        
 def make_frames_withVis(datadir,fhd_path,uvfits_path,outdir,jd,pol='XX',savefig=True,ra_range=9,dec_range=9,
                nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',
                bl=(62,333),gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
@@ -1184,7 +1271,8 @@ def plotGainsAndConv(datadir, uvc = None, raw = None, cal = None, model = None,
 def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
                     gainNorm=np.abs,calNorm=np.abs,modelNorm=np.abs,rawNorm=np.abs,
                    savefig=False,outfig='',write_params=True,split_plots=True,nsplit=3,file_ext='pdf',
-                   jd=2459855,readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90):
+                   jd=2459855,readOnly=False,NblsPlot='all',sortBy='blLength',pol='XX',percentile=90,
+                   readAllFiles=False):
     from pyuvdata import UVCal
     args = locals()
     
@@ -1210,9 +1298,14 @@ def plotVisAndGains(datadir, uvc = None, raw = None, cal = None, model = None,
     if raw is None:
         print('Reading Raw')
         raw = UVData()
-        raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}_0.uvfits'
-        raw.read(raw_file)
-        raw.file_name = raw_file
+        rf = sorted(glob.glob(f'{datadir}/{jd}_fhd_raw_data_{pol}*'))
+#         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}_0.uvfits'
+        if readAllFiles is False:
+            rf = [rf[0]]
+        print('Raw files are: \n')
+        print(rf)
+        raw.read(rf)
+        raw.file_name = rf
     else:
         raw_file=None
     if cal is None:
