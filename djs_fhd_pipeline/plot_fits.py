@@ -51,11 +51,6 @@ class ImageFromFits:
         self.dec_axis = dec_axis
 
     def limit_data_range(self, ra_range=None, dec_range=None):
-#         print('ra_range:')
-#         print(ra_range)
-#         print('self.ra_axis:')
-#         print(f'{self.ra_axis[0]} - {self.ra_axis[-1]}')
-        
         if ra_range is not None:
             if type(ra_range)==int:
                 ramid = self.ra_axis[len(self.ra_axis)//2]
@@ -70,21 +65,20 @@ class ImageFromFits:
         else:
             use_ra_inds = range(len(self.ra_axis))
             ra_range = [self.ra_axis[0],self.ra_axis[1]]
-#             print('use_ra_inds:' + use_ra_inds)
-#         print('use_ra_inds')
-#         print(f'{use_ra_inds[0]} - {use_ra_inds[-1]}')
         if dec_range is not None:
-#             print(dec_range[0])
-#             print(dec_range[1])
-            use_dec_inds = [i for i in range(len(self.dec_axis))
-                            if dec_range[0] < self.dec_axis[i] < dec_range[1]
-                            ]
-#             print(use_dec_inds)
+            if type(dec_range)==int:
+                decmid = self.dec_axis[len(self.dec_axis)//2]
+                decmin = np.argmin(abs(np.subtract(self.dec_axis,decmid - dec_range/2)))
+                decmax = np.argmin(abs(np.subtract(self.dec_axis,decmid + dec_range/2)))
+                use_dec_inds = [i for i in range(decmin,decmax)]
+                dec_range = [self.dec_axis[decmin],self.dec_axis[decmax]]
+            else:
+                use_dec_inds = [i for i in range(len(self.dec_axis))
+                                if dec_range[0] < self.dec_axis[i] < dec_range[1]
+                                ]
         else:
             use_dec_inds = range(len(self.dec_axis))
             print('use_dec_inds:' + use_dec_inds)
-#         print(use_ra_inds)
-#         print(use_dec_inds)
         self.signal_arr = self.signal_arr[
             use_dec_inds[0]:use_dec_inds[-1]+1,
             use_ra_inds[0]:use_ra_inds[-1]+1
@@ -217,9 +211,9 @@ def difference_images(image1, image2):
 
 
 def plot_fits_image(
-    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,
+    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,gradient=False,
     colorbar_label='Flux Density (Jy/beam)', plot_grid=True,
-    xlabel='RA (deg.)', ylabel='Dec. (deg.)'
+    xlabel='RA (deg.)', ylabel='Dec. (deg.)',fontsize=12
 ):
 
 #     ra_range = [45,75]
@@ -239,6 +233,8 @@ def plot_fits_image(
         colorbar_label = 'log(Flux Density)'
     else:
         data = fits_image.signal_arr
+    if gradient:
+        data = np.gradient(data)
     im = ax.imshow(
         data, origin='lower', interpolation='none',
         cmap='Greys_r',
@@ -253,7 +249,7 @@ def plot_fits_image(
 #     ax.set_facecolor('black')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    ax.set_title(title,fontsize=fontsize)
     if plot_grid:
         ax.grid(which='both', zorder=10, lw=0.5)
     cbar = plt.colorbar(im,ax=ax,pad=0.01)
@@ -278,7 +274,8 @@ def plot_fits_image(
 #             np.savetxt(f, coords, fmt=['%f','%f'], header='RA        DEC')
     return im
 
-def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sources=[]):
+def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sources=[],fontsize=12,
+                reverse_ra=False):
     map_path = f'/lustre/aoc/projects/hera/dstorer/Setup/djsScripts/Scripts/haslam408_dsds_Remazeilles2014.fits'
     hdulist = fits.open(map_path)
 
@@ -298,10 +295,14 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     zenith_end = zenith_end.transform_to('icrs')
     lst_start = obstime_start.sidereal_time('mean').hour
     lst_end = obstime_end.sidereal_time('mean').hour
-    start_coords = [zenith_start.ra.degree,zenith_start.dec.degree]
+    if reverse_ra:
+        start_coords = [zenith_end.ra.degree,zenith_start.dec.degree]
+        end_coords = [zenith_start.ra.degree,zenith_end.dec.degree]
+    else:
+        start_coords = [zenith_start.ra.degree,zenith_start.dec.degree]
+        end_coords = [zenith_end.ra.degree,zenith_end.dec.degree]
     if start_coords[0] > 180:
         start_coords[0] = start_coords[0] - 360
-    end_coords = [zenith_end.ra.degree,zenith_end.dec.degree]
     if end_coords[0] > 180:
         end_coords[0] = end_coords[0] - 360
     
@@ -314,13 +315,19 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     else:
         ra = np.linspace(-180,180,nx)
         dec = np.linspace(-90,zenith_start.dec.degree+90,ny)
+    if reverse_ra:
+        ra = np.flip(ra)
     ra_grid, dec_grid = np.meshgrid(ra * u.deg, dec * u.deg)
     
     #Create alpha grid
     alphas = np.ones(ra_grid.shape)
     alphas = np.multiply(alphas,0.5)
-    ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]-fwhm/2)))
-    ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]+fwhm/2)))
+    if reverse_ra:
+        ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]+fwhm/2)))
+        ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]-fwhm/2)))
+    else:
+        ra_min = np.argmin(np.abs(np.subtract(ra,start_coords[0]-fwhm/2)))
+        ra_max = np.argmin(np.abs(np.subtract(ra,end_coords[0]+fwhm/2)))
     dec_min = np.argmin(np.abs(np.subtract(dec,start_coords[1]-fwhm/2)))
     dec_max = np.argmin(np.abs(np.subtract(dec,end_coords[1]+fwhm/2)))
     alphas[dec_min:dec_max, ra_min:ra_max] = 1
@@ -332,8 +339,14 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     temperature = healpy.read_map(map_path)
     tmap = hp.interpolate_bilinear_skycoord(coords, temperature)
     tmap = tmap.reshape((ny, nx))
+#     if reverse_ra is False:
     tmap = np.flip(tmap,axis=1)
     alphas = np.flip(alphas,axis=1)
+#     print(f'fwhm: {fwhm}')
+#     print(f'Start coords: {start_coords}')
+#     print(f'End coords: {end_coords}')
+#     print(np.shape(alphas))
+#     print(f'ra_min: {ra_min}, ra_max: {ra_max}')
 
     # Make a plot of the interpolated temperatures
 #     plt.figure(figsize=(12, 7))
@@ -346,11 +359,11 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
     ax.vlines(x=start_coords[0],ymin=start_coords[1],ymax=dec[-1],linestyles='dashed')
     ax.vlines(x=end_coords[0],ymin=start_coords[1],ymax=dec[-1],linestyles='dashed')
     ax.annotate(np.around(lst_start,2),xy=(start_coords[0],dec[-1]),xytext=(0,8),
-                 fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
+                 fontsize=fontsize,xycoords='data',textcoords='offset points',horizontalalignment='center')
 #     plt.annotate(np.around(lst_end,2),xy=(end_coords[0],dec[-1]),xytext=(0,8),
 #                  fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
     ax.annotate('LST (hours)',xy=(np.average([start_coords[0],end_coords[0]]),dec[-1]),
-                xytext=(0,22),fontsize=10,xycoords='data',textcoords='offset points',horizontalalignment='center')
+                xytext=(0,22),fontsize=fontsize,xycoords='data',textcoords='offset points',horizontalalignment='center')
     for s in sources:
         if s[1] > dec[0] and s[1] < dec[-1]:
             if s[0] > 180:
@@ -362,34 +375,40 @@ def plot_sky_map(uvd,ax,ra_pad=20,dec_pad=30,clip=True,fwhm=11,nx=300,ny=200,sou
             else:
                 ax.scatter(s[0],s[1],c='k',s=6)
                 if len(s[2]) > 0:
-                    ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+                    if reverse_ra:
+                        ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                    else:
+                        ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
 #     plt.show()
 #     plt.close()
 #     hdulist.close()
     return im
 
-def gather_source_list():
+def gather_source_list(inc_flux=False):
     sources = []
-    sources.append((50.6750,-37.2083,'Fornax A'))
-    sources.append((201.3667,-43.0192,'Cen A'))
+    sources.append((50.6750,-37.2083,'Fornax A',541.77))
+    sources.append((201.3667,-43.0192,'Cen A',200))
     # sources.append((83.6333,22.0144,'Taurus A'))
-    sources.append((252.7833,4.9925,'Hercules A'))
-    sources.append((139.5250,-12.0947,'Hydra A'))
-    sources.append((79.9583,-45.7789,'Pictor A'))
-    sources.append((187.7042,12.3911,'Virgo A'))
-    sources.append((83.8208,-59.3897,'Orion A'))
-    sources.append((80.8958,-69.7561,'LMC'))
-    sources.append((13.1875,-72.8286,'SMC'))
-    sources.append((201.3667,-43.0192,'Cen A'))
-    sources.append((83.6333,20.0144,'Crab Pulsar'))
-    sources.append((128.8375,-45.1764,'Vela SNR'))
+    sources.append((252.7833,4.9925,'Hercules A',279.36))
+    sources.append((139.5250,-12.0947,'Hydra A',226.32))
+    sources.append((79.9583,-45.7789,'Pictor A',271.16))
+    sources.append((187.7042,12.3911,'Virgo A',372.73))
+    sources.append((83.8208,-59.3897,'Orion A',200))
+    sources.append((80.8958,-69.7561,'LMC',200))
+    sources.append((13.1875,-72.8286,'SMC',200))
+    sources.append((201.3667,-43.0192,'Cen A',200))
+    sources.append((83.6333,20.0144,'Crab Pulsar',200))
+    sources.append((128.8375,-45.1764,'Vela SNR',200))
     cat_path = f'/lustre/aoc/projects/hera/dstorer/Setup/djsScripts/Scripts/G4Jy_catalog.tsv'
     cat = open(cat_path)
     f = csv.reader(cat,delimiter='\n')
     for row in f:
         if len(row)>0 and row[0][0]=='J':
             s = row[0].split(';')
-            tup = (float(s[1]),float(s[2]),'')
+            if inc_flux:
+                tup = (float(s[1]),float(s[2]),'',float(s[3]))
+            else:
+                tup = (float(s[1]),float(s[2]),'')
             sources.append(tup)
     return sources
 

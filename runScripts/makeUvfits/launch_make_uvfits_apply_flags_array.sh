@@ -44,7 +44,7 @@ N_combine=10
 internode_only=0
 intersnap_only=1
 write_minis=1
-num_times=10
+num_times=5
 array_job=1
 phase="perset"
 

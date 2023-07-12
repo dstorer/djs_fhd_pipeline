@@ -17,7 +17,7 @@ parser.add_argument('version_str', help='A string to include in the name of all 
 parser.add_argument('SLURM_ARRAY_TASK_ID', help='The index of the array job to run')
 parser.add_argument('band', help='Options are low,mid,high,full - determines frequency band')
 parser.add_argument('exants', help='A yml file containing a list of flagged antennas')
-parser.add_argument('license', default='NRAO', help='specify which IDL license to use. Can be NRAO or HERA')
+parser.add_argument('license', help='specify which IDL license to use. Can be NRAO or HERA')
 args = parser.parse_args()
 
 print('obs_file is:')

@@ -4,16 +4,15 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   heap_gc
 
   ; parse command line args
-  ;args = command_line_args(count=nargs)
-  ;print, nargs
-  ;vis_file_list=args[0]
-  ;print, args[0]
-  ;version=args[1]
-  ;print, args[1]
-  ;output_directory = args[2]
-  ;case_name=args[3]
-  ;case_name='test_deconvolve_no_sidelobe_later_time_transfer_cal'
-  
+  args = command_line_args(count=nargs)
+  print, nargs
+  vis_file_list=args[0]
+  print, args[0]
+  version=args[1]
+  print, args[1]
+  output_directory = args[2]
+  case_name=args[3]
+  ;case_name='test_deconvolve_no_sidelobe_later_time'
 
   instrument = 'hera'
 
@@ -86,6 +85,115 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
     
   case case_name of
   
+    'deconvolve_no_sidelobe_fov71_dim_1024_beam_thresh_10': begin
+      fov=71.51
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+              initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+    end
+    
+    'medRes_IS_useInitialCalibration_from906': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/fhd_2459906.254743934_medRes_IS_useInitialCalibration_from911_mid_4/calibration/zen.2459906.254743934_mid_5obs_1_cal.sav'
+    end
+    
+    'medRes_IS_useInitialCalibration_from911': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459855/fhdOutput/useInitialCal/fhd_2459911.3408194473_medRes_IS_useInitialCalibration_mid_79/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_fov71_dim_1024': begin
+      fov=71.51
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      version=case_name
+      ;transfer_psf='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459911/fhdOutput/deconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459911/fhdOutput/deconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+    end
+
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024': begin
+      fov=0
+      kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      version=case_name
+      transfer_psf='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459911/fhdOutput/deconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459911/fhdOutput/deconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+    end
+
     'test_versions': begin
         min_cal_baseline=200
     end
@@ -489,9 +597,15 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
       allow_sidelobe_model_sources=0
       sidelobe_subtract=0
       no_ps=1
+<<<<<<< HEAD
       no_png=0
       export_images=1
       recalculate_all = 0
+=======
+      no_png=1
+      export_images=0
+      recalculate_all = 1
+>>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
       calibrate_visibilities=1
       uvfits_version = 5
       uvfits_subversion = 1
