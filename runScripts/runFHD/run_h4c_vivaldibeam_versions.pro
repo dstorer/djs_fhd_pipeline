@@ -28,7 +28,7 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   cleanup=0
   ps_export=0
   
-  psf_dim=28
+  ;psf_dim=28
   image_filter_fn='filter_uv_uniform' ;applied ONLY to output images
 
   catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
@@ -68,7 +68,7 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   beam_diff_image=0
   beam_residual_threshold=0.1
   output_residual_histogram=1
-  show_beam_contour=1
+  show_beam_contour=0
   contour_level=[0,0.01,0.05,0.1,0.2,0.5,0.67,0.9]
   contour_color='blue'
 
@@ -81,6 +81,7 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   dft_threshold=1
   init_healpix
   
+  case_name='test_deconvolve_no_sidelobe_later_time_transfer_cal_fov71_dim_1024_beam_thresh_10'
     
   case case_name of
   
@@ -195,6 +196,208 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
 
     'test_versions': begin
         min_cal_baseline=200
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_fov71_dim_1024_beam_thresh_10': begin
+      fov=71.51
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_fov45_dim_1024': begin
+      fov=45.0
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_fov82_dim_1024': begin
+      fov=82.0
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_fov71_dim_1024': begin
+      fov=71.51
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'cal_only_no_sidelobe_later_time': begin
+      firstpass=1
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs'
+      subtract_sidelobe_catalog=0
+      allow_sidelobe_cal_sources=0
+      allow_sidelobe_model_sources=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 0
+      return_decon_visibilities = 0
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 1
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version='cal_only_10obs_no_ps_no_sidelobe_later_time'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
     end
     
     'medResFlaggingOnly_ISO_perSetPhasing_40lambdaCut': begin
@@ -352,7 +555,6 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
     
     'test_deconvolve_no_sidelobe': begin
       firstpass=0
-      subtract_sidelobe_catalog=0
       allow_sidelobe_cal_sources=0
       allow_sidelobe_model_sources=0
       sidelobe_subtract=0
@@ -389,14 +591,21 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
     
     'test_deconvolve_no_sidelobe_later_time': begin
       firstpass=0
-      subtract_sidelobe_catalog=0
+      transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time'
+      ;subtract_sidelobe_catalog=0
       allow_sidelobe_cal_sources=0
       allow_sidelobe_model_sources=0
       sidelobe_subtract=0
       no_ps=1
+<<<<<<< HEAD
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+=======
       no_png=1
       export_images=0
       recalculate_all = 1
+>>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
       calibrate_visibilities=1
       uvfits_version = 5
       uvfits_subversion = 1
@@ -416,6 +625,284 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
       debug_region_grow = 0
       initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
       version='test_deconvolve_10obs_no_ps_no_sidelobe_later_time'
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal': begin
+      firstpass=0
+      transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog=0
+      allow_sidelobe_cal_sources=0
+      allow_sidelobe_model_sources=0
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_with_sidelobe_later_time_transfer_cal': begin
+      firstpass=0
+      transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=1
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_no_FOV': begin
+      fov=0
+      kbinsize=0.5
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_1': begin
+      fov=0
+      kbinsize=0.1
+      firstpass=0
+      transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_no_FOV'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin1_5': begin
+      fov=0
+      kbinsize=1.5
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_no_FOV'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024': begin
+      fov=0
+      kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_1024/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
+      output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
+      vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
+      catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;subtract_sidelobe_catalog="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve/beams/zen.2459911.2960802047_mid_10obs_19_beams.sav'
+    end
+    
+    'test_deconvolve_no_sidelobe_later_time_transfer_cal_kbin0_313_dim_2048': begin
+      fov=0
+      kbinsize=0.313
+      dimension=2048
+      firstpass=0
+      ;transfer_psf='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_no_sidelobe_later_time_transfer_cal_no_FOV'
+      transfer_cal='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_cal_only_10obs_no_ps_no_sidelobe_later_time/calibration/zen.2459911.3408194473_mid_10obs_39_cal.sav'
+      ;subtract_sidelobe_catalog='/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav'
+      ;allow_sidelobe_cal_sources=1
+      ;allow_sidelobe_model_sources=1
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=0
+      export_images=1
+      recalculate_all = 1
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      ;initial_calibration='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/fhd_test_deconvolve_10obs/calibration/zen.2459911.2960802047_mid_10obs_19_cal.sav'
+      version=case_name
       output_directory='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution'
       vis_file_list='/Users/dstorer/Documents/_Files/Dara/School/Graduate/RadCos/H6C_onFHD/testDeconvolution/zen.2459911.3408194473_mid_10obs_39.uvfits'
       catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
