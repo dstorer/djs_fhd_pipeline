@@ -213,7 +213,8 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
         vmax = np.percentile(data.signal_arr,95)
         im = plot_fits.plot_fits_image(data, axes[1][0], [vmin,vmax], output_path, prefix, write_pixel_coordinates, log_scale,
                                  ra_range=ra_range,dec_range=_dec_range,title='Residual',fontsize=fontsize)
-        sources = plot_fits.gather_source_list()
+        sources = plot_fits.gather_source_list(inc_flux=True)
+        ax = axes[1][1]
         if plotBeam:
             beamFile = beam_files[ind]
             data = plot_fits.load_image(beamFile)
