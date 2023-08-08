@@ -9,6 +9,7 @@ from hera_commissioning_tools import utils
 from scipy.spatial import distance
 from astropy.io.votable import parse
 from scipy.stats import norm
+from djs_fhd_pipeline import plot_fits
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
@@ -473,6 +474,43 @@ def plotSourcePairs(fhd,gleam,ncols=10,delta=0.15,sortBy=None,ratioThresh=5,sing
             curr_func = inspect.stack()[0][3]
             utils.write_params_to_text(outfig,args,curr_file=curr_file,
                                        curr_func=curr_func)
+            
+def plotBeam(fhd_dir,pol='XX',color_scale=[-1763758,1972024],output_path='',prefix='beam',
+             write_pixel_coordinates=False,log_scale=False,ra_range=40,dec_range=40,fontsize=16,
+             savefig=False,write_params=True,outfig=''):
+    import glob
+    beamFile = glob.glob(f'{fhd_dir}/output_data/*_Beam_{pol}.fits')[0]
+    data = plot_fits.load_image(beamFile)
+    fig, ax = plt.subplots(1,1,figsize=(12,12))
+    im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Beam',fontsize=fontsize)
+    sources = plot_fits.gather_source_list()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    for s in sources:
+        if s[1] > ylim[0] and s[1] < ylim[1]:
+            if s[0] > xlim[0] and s[0] < xlim[1]:
+                if s[0] > 180:
+                    s = (s[0]-360,s[1],s[2])
+                if s[2] == 'LMC' or s[2] == 'SMC':
+                    ax.annotate(s[2],xy=(s[0],s[1]),xycoords='data',fontsize=8,xytext=(20,-20),
+                                 textcoords='offset points',arrowprops=dict(facecolor='red', shrink=2,width=1,
+                                                                            headwidth=4))
+                else:
+                    ax.scatter(s[0],s[1],c='r',s=10)
+                    if len(s[2]) > 0:
+                        if reverse_ra:
+                            ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                        else:
+                            ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+    if savefig:
+        plt.savefig(outfig)
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func=curr_func)
+    else:
+        plt.show()
 
 
 def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
