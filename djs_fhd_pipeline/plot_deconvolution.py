@@ -8,16 +8,8 @@ import inspect
 from hera_commissioning_tools import utils
 from scipy.spatial import distance
 from astropy.io.votable import parse
-<<<<<<< HEAD
-
-def read_catalogs(fhd_path, gleam_path):
-    votable = parse(gleam_path)
-table = list(votable.iter_tables())[0]
-gleam = table.to_table()
-fhd = np.loadtxt(fhd_path)[1:, :]
-return fhd, gleam
-=======
 from scipy.stats import norm
+from djs_fhd_pipeline import plot_fits
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
@@ -29,7 +21,6 @@ def read_catalogs(fhd_path, gleam_path):
     gleam = table.to_table()
     fhd = np.loadtxt(fhd_path)[1:, :]
     return fhd, gleam
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
 
 def restrictGleam(gleam_ras, gleam_decs, gleam_flux, ra_range, dec_range):
     inds = np.ones(np.shape(gleam_ras))
@@ -45,20 +36,13 @@ def restrictGleam(gleam_ras, gleam_decs, gleam_flux, ra_range, dec_range):
     gleam_flux = gleam_flux[inds]
     return gleam_ras, gleam_decs, gleam_flux
 
-<<<<<<< HEAD
-def getCols(fhd, gleam, sortBy=None,flux_type='stokes'):
-=======
 def getCols(fhd, gleam, sortBy=None,flux_type='stokes',beamCut=0):
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     gleam_ras = gleam['RAJ2000']
     gleam_decs = gleam['DEJ2000']
     gleam_flux = gleam['Fint166']
     fhd_ras = fhd[:,3]
     fhd_decs = fhd[:,4]
-<<<<<<< HEAD
-=======
     fhd_beam = fhd[:,7]
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     if flux_type == 'stokes':
         fhd_flux = fhd[:,13]
     else:
@@ -67,8 +51,6 @@ def getCols(fhd, gleam, sortBy=None,flux_type='stokes',beamCut=0):
     dec_range = [np.min(fhd_decs),np.max(fhd_decs)]
     gleam_ras, gleam_decs, gleam_flux = restrictGleam(gleam_ras, gleam_decs, gleam_flux,
                                                      ra_range, dec_range)
-<<<<<<< HEAD
-=======
     if beamCut>0:
         beam_inds = fhd_beam>beamCut
         fhd_flux = fhd_flux[beam_inds]
@@ -79,7 +61,6 @@ def getCols(fhd, gleam, sortBy=None,flux_type='stokes',beamCut=0):
         dec_range = [np.min(fhd_decs),np.max(fhd_decs)]
         gleam_ras, gleam_decs, gleam_flux = restrictGleam(gleam_ras, gleam_decs, gleam_flux,
                                                      ra_range, dec_range)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     if sortBy == 'flux':
         inds = (-fhd_flux).argsort()
         ginds = (-gleam_flux).argsort()
@@ -93,14 +74,6 @@ def getCols(fhd, gleam, sortBy=None,flux_type='stokes',beamCut=0):
         inds = np.arange(0,len(fhd_ras))
         ginds = np.arange(0,len(gleam_ras))
     flux = fhd_flux[inds]
-<<<<<<< HEAD
-    ra = fhd_ras[inds]
-    dec = fhd_decs[inds]
-    gra = gleam_ras[ginds]
-    gdec = gleam_decs[ginds]
-    gflux = gleam_flux[ginds]
-=======
-    print(len(flux))
     ra = fhd_ras[inds]
     dec = fhd_decs[inds]
     fhd_beam = fhd_beam[inds]
@@ -108,24 +81,12 @@ def getCols(fhd, gleam, sortBy=None,flux_type='stokes',beamCut=0):
     gdec = gleam_decs[ginds]
     gflux = gleam_flux[ginds]
 
-    print(len(flux))
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     return ra, dec, flux, gra, gdec, gflux
 
 def plotFhdGleamRatioMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
                      simple_pairs=True,complex_pairs=True,unmatched=False,combine_fhd=False,
-<<<<<<< HEAD
-                        logscale=False,savefig=False,outfig='',fluxCombType=np.sum, write_params=True):
-    args = locals()
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes')
-    spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
-                                                       ratioThresh=ratioThresh,delta=delta,
-                                                       singleSourceThresh=singleSourceThresh,
-                                                       combine_fhd=combine_fhd,fluxCombType=fluxCombType)
-    fig = plt.figure(figsize=(16,13))
-=======
-                        logscale=False,savefig=False,outfig='',fluxCombType=np.sum, write_params=True,
-                        beamCut=0,cmap='plasma_r',vmin=0,vmax=2,edgecolor='face'):
+                     logscale=False,savefig=False,outfig='',fluxCombType=np.sum, write_params=True,
+                     beamCut=0,cmap='plasma_r',vmin=0,vmax=2,edgecolor='face'):
     args = locals()
     import matplotlib
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes',beamCut=beamCut)
@@ -135,7 +96,6 @@ def plotFhdGleamRatioMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSo
                                                        combine_fhd=combine_fhd,fluxCombType=fluxCombType,
                                                        beamCut=beamCut)
     fig = plt.figure(figsize=(16,10))
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     if simple_pairs:
         fhd_srcs = [x[0][0:3] for x in spairs]
         fhd_x = [x[0] for x in fhd_srcs]
@@ -145,19 +105,11 @@ def plotFhdGleamRatioMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSo
         gleam_f = [np.average(x[1:],axis=0)[2] for x in spairs]
         rats = np.divide(fhd_f,gleam_f)
         if logscale:
-<<<<<<< HEAD
-            im = plt.scatter(fhd_x,fhd_y,c=rats,cmap='plasma_r',marker='o',
-                        norm=matplotlib.colors.LogNorm(vmin=10e-3,vmax=1.1))
-        else:
-            im = plt.scatter(fhd_x,fhd_y,c=rats,cmap='plasma_r',marker='o',
-                        vmin=0,vmax=5)
-=======
             im = plt.scatter(fhd_x,fhd_y,c=rats,cmap=cmap,marker='o',
                         norm=matplotlib.colors.LogNorm(vmin=10e-3,vmax=1.1),edgecolor=edgecolor)
         else:
             im = plt.scatter(fhd_x,fhd_y,c=rats,cmap=cmap,marker='o',
                         vmin=vmin,vmax=vmax,edgecolor=edgecolor)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     if complex_pairs:
         fhd_srcs = [x[0][0:3] for x in cpairs]
         fhd_x = [x[0] for x in fhd_srcs]
@@ -167,19 +119,11 @@ def plotFhdGleamRatioMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSo
         gleam_f = [fluxCombType(x[1:],axis=0)[2] for x in cpairs]
         rats = np.divide(fhd_f,gleam_f)
         if logscale:
-<<<<<<< HEAD
-            im = plt.scatter(fhd_x,fhd_y,c=rats,cmap='plasma_r',marker='s',
-                        norm=matplotlib.colors.LogNorm(vmin=10e-3,vmax=1.1))
-        else:
-            im = plt.scatter(fhd_x,fhd_y,c=rats,cmap='plasma_r',marker='s',
-                        vmin=0,vmax=5)
-=======
             im = plt.scatter(fhd_x,fhd_y,c=rats,cmap=cmap,marker='s',
                         norm=matplotlib.colors.LogNorm(vmin=10e-3,vmax=1.1),edgecolor=edgecolor)
         else:
             im = plt.scatter(fhd_x,fhd_y,c=rats,cmap=cmap,marker='s',
                         vmin=vmin,vmax=vmax,edgecolor=edgecolor)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     plt.colorbar(im)
     plt.gca().set_aspect('equal')
     plt.xlabel('RA (deg)')
@@ -193,13 +137,10 @@ def plotFhdGleamRatioMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSo
                                        curr_func=curr_func)
 
 def plotSourceCompMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
-<<<<<<< HEAD
-                     simple_pairs=True,complex_pairs=True,unmatched=False,combine_fhd=False):
-=======
+
                      simple_pairs=True,complex_pairs=True,unmatched=False,combine_fhd=False,
                      savefig=False,write_params=True,outfig=''):
     args=locals()
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy)
     spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
                                                        ratioThresh=ratioThresh,delta=delta,
@@ -215,14 +156,10 @@ def plotSourceCompMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourc
         pairs = [(np.average(x[1:],axis=0)[0],np.average(x[1:],axis=0)[1]) for x in spairs]
         diffs = np.subtract(fhd_srcs,pairs)
         plt.scatter(fhd_x,fhd_y,color='green',marker='o',s=20)
-<<<<<<< HEAD
-        plt.quiver(fhd_x,fhd_y,diffs[:,0],diffs[:,1],color='green',angles='xy',scale=0.2,scale_units='xy')
-=======
         if complex_pairs:
             plt.quiver(fhd_x,fhd_y,diffs[:,0],diffs[:,1],color='green',angles='xy',scale=0.2,scale_units='xy')
         else:
             plt.quiver(fhd_x,fhd_y,diffs[:,0],diffs[:,1],color='green',angles='xy',scale=0.1,scale_units='xy')
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     
     if complex_pairs:
         print(f'Plotting {len(cpairs)} complex pairs')
@@ -243,31 +180,17 @@ def plotSourceCompMap(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourc
     plt.gca().set_aspect('equal')
     plt.xlabel('RA (deg)')
     plt.ylabel('DEC (deg)')
-<<<<<<< HEAD
-=======
-    
     if savefig:
         plt.savefig(outfig)
         if write_params:
             curr_func = inspect.stack()[0][3]
             utils.write_params_to_text(outfig,args,curr_file=curr_file,
                                        curr_func=curr_func)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
 
 
 def plotFractionGleamFound(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
                      combine_fhd=False,logscale=True,savefig=False,outfig='',
                      write_params=True,simple_pairs=True,complex_pairs=False,fluxCombType=np.sum,
-<<<<<<< HEAD
-                      density=False, nbins=20):
-    args = locals()
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes')
-    spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
-                                                       ratioThresh=ratioThresh,delta=delta,
-                                                       singleSourceThresh=singleSourceThresh,
-                                                       combine_fhd=combine_fhd,fluxCombType=fluxCombType)
-    inds = get_unmatched_gleam(apairs,fhd,gleam,sortBy=sortBy)
-=======
                       density=False, nbins=20, beamCut=0):
     args = locals()
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes',beamCut=beamCut)
@@ -277,7 +200,6 @@ def plotFractionGleamFound(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,single
                                                        combine_fhd=combine_fhd,fluxCombType=fluxCombType,
                                                        beamCut=beamCut)
     inds = get_unmatched_gleam(apairs,fhd,gleam,sortBy=sortBy,beamCut=beamCut)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     inds = np.array(inds,dtype=bool)
     gfound = gflux[inds]
     
@@ -287,11 +209,6 @@ def plotFractionGleamFound(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,single
         bins = np.logspace(np.log10(bins[0]),np.log10(bins[-1]),len(bins))
     hist1, bins1 = np.histogram(gflux, bins=bins)
     hist2, bins2 = np.histogram(gfound, bins=bins)
-<<<<<<< HEAD
-    print(hist1)
-    print(hist2)
-=======
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     centers = (bins[:-1] + bins[1:]) / 2
     ratio = np.divide(hist2,hist1)
     
@@ -299,7 +216,6 @@ def plotFractionGleamFound(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,single
     ax = fig.add_subplot(gs[0, 0])
     
     width = 0.7 * (bins[1] - bins[0])
-#     plt.bar(centers, hist1, align='center',width=width)
     ax.hist(gflux,bins=bins,alpha=0.5,fill=False,edgecolor='red',linewidth=2,label='all GLEAM')
     ax.hist(gfound,bins=bins,alpha=0.5,fill=False,edgecolor='blue',linewidth=2, label='Found by FHD')
     ax.set_xscale('log')
@@ -327,17 +243,8 @@ def plotFractionGleamFound(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,single
 
 def plotFhdVsGleamFlux(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
                      combine_fhd=False,logscale=True,savefig=False,outfig='',
-<<<<<<< HEAD
-                     write_params=True,simple_pairs=True,complex_pairs=False,fluxCombType=np.sum):
-    args = locals()
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes')
-    spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
-                                                       ratioThresh=ratioThresh,delta=delta,
-                                                       singleSourceThresh=singleSourceThresh,
-                                                       combine_fhd=combine_fhd,fluxCombType=fluxCombType)
-=======
                      write_params=True,simple_pairs=True,complex_pairs=False,fluxCombType=np.sum,
-                      beamCut=0):
+                     beamCut=0):
     args = locals()
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes',beamCut=beamCut)
     spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
@@ -345,7 +252,6 @@ def plotFhdVsGleamFlux(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSour
                                                        singleSourceThresh=singleSourceThresh,
                                                        combine_fhd=combine_fhd,fluxCombType=fluxCombType,
                                                        beamCut=beamCut)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(1,1,1)
     
@@ -388,8 +294,7 @@ def plotFluxHists(fhd,gleam,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThr
                                                        ratioThresh=ratioThresh,delta=delta,
                                                        singleSourceThresh=singleSourceThresh,
                                                        combine_fhd=combine_fhd,fluxCombType=np.sum)
-#     nomatch = np.asarray(apairs)[noinds]
-#     print(len(nomatch))
+
     fig, ax = plt.subplots(1,3,figsize=(16,6))
     bins = np.linspace(0,5,20)
     titles = ['Simple Pairs','Complex Pairs','Unmatched FHD Sources']
@@ -430,13 +335,8 @@ def combine_sources(ras,decs,fluxes,fluxCombType=np.sum):
     return ra, dec, flux
 
 def find_sources(fhd, gleam, ratioThresh=5, delta=0.15, sortBy=None, singleSourceThresh=0.1,
-<<<<<<< HEAD
-                combine_fhd=False, combine_fhd_thresh=0.02, fluxCombType=np.sum):
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy)
-=======
                 combine_fhd=False, combine_fhd_thresh=0.02, fluxCombType=np.sum, beamCut=0):
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy, beamCut=beamCut)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     print(f'Matching gleam to {len(ra)} fhd sources')
     
     src_pairs_simple = [] 
@@ -499,13 +399,8 @@ def find_sources(fhd, gleam, ratioThresh=5, delta=0.15, sortBy=None, singleSourc
             complex_inds.append(i)
     return src_pairs_simple, src_pairs_complex, all_pairs, simple_inds, complex_inds, nomatch_inds
 
-<<<<<<< HEAD
-def get_unmatched_gleam(apairs,fhd,gleam,sortBy):
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy)
-=======
 def get_unmatched_gleam(apairs,fhd,gleam,sortBy,beamCut=0):
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,beamCut=beamCut)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     inds = np.zeros(np.shape(gra))
     count = 0
     for i,p in enumerate(apairs):
@@ -518,30 +413,20 @@ def get_unmatched_gleam(apairs,fhd,gleam,sortBy,beamCut=0):
 
 
 def plotSourcePairs(fhd,gleam,ncols=10,delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
-<<<<<<< HEAD
-                   plotAvgSrc=True,combine_fhd=False):
-
-=======
                    plotAvgSrc=True,combine_fhd=False,sourcerange=[0,-1],savefig=False,outfig='',
-                    write_params=True):
+                   write_params=True):
     args = locals()
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     print(f'Sorting by {sortBy}')
     ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy)
     spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
                                                        ratioThresh=ratioThresh,delta=delta,
                                                        singleSourceThresh=singleSourceThresh,
                                                        combine_fhd=combine_fhd)
-<<<<<<< HEAD
-    print(f'Plotting {len(apairs)} source pairs')
-    nrows = len(apairs)//ncols+1
-=======
     apairs = apairs[sourcerange[0]:sourcerange[1]]
     print(f'Plotting {len(apairs)} source pairs')
     nrows = len(apairs)//ncols
     if len(apairs)%ncols !=0:
         nrows += 1
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     fig, ax = plt.subplots(nrows,10,figsize=(20,nrows*2))
     for i,src in enumerate(apairs):
         if src in spairs:
@@ -565,16 +450,11 @@ def plotSourcePairs(fhd,gleam,ncols=10,delta=0.15,sortBy=None,ratioThresh=5,sing
             for j,src in enumerate(apairs[i][1:]):
                 a.scatter(src[0],src[1],facecolor='blue',marker='o',s=60,edgecolor='k',alpha=0.3)
             if plotAvgSrc and len(apairs[i])>2:
-<<<<<<< HEAD
-                avg_src = (np.average(apairs[i][1:],axis=0)[0],np.average(apairs[i][1:],axis=0)[1])
-                a.scatter(avg_src[0],avg_src[1],facecolor='red',marker='o',s=60,edgecolor='k',alpha=0.3)
-=======
                 rc,dc,fc = combine_sources([x[0] for x in apairs[i][1:]],[x[1] for x in apairs[i][1:]],
                                         [x[2] for x in apairs[i][1:]])
 #                 avg_src = (np.average(apairs[i][1:],axis=0)[0],np.average(apairs[i][1:],axis=0)[1])
                 a.scatter(rc,dc,facecolor='red',marker='o',s=60,edgecolor='k',alpha=0.3)
 #                 a.scatter(avg_src[0],avg_src[1],facecolor='red',marker='o',s=60,edgecolor='k',alpha=0.3)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
         a.set_xticks([])
         a.set_yticks([])
         a.set_xlim([r-delta,r+delta])
@@ -588,24 +468,49 @@ def plotSourcePairs(fhd,gleam,ncols=10,delta=0.15,sortBy=None,ratioThresh=5,sing
         i+=1
         a = ax[i//ncols][i%ncols]
         a.set_axis_off()
-<<<<<<< HEAD
-
-
-def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
-                     combine_fhd=False,savefig=False,outfig='',write_params=True,units='deg'):
-    args = locals()
-    ra, dec, flux, gra, gdec, gflux = getCols(fhd,gleam,sortBy=sortBy,flux_type='stokes')
-    spairs, cpairs, apairs, sinds, cinds, noinds = find_sources(fhd, gleam, sortBy=sortBy,
-                                                       ratioThresh=ratioThresh,delta=delta,
-                                                       singleSourceThresh=singleSourceThresh,
-                                                       combine_fhd=combine_fhd,fluxCombType=np.sum)
-=======
     if savefig:
         plt.savefig(outfig)
         if write_params:
             curr_func = inspect.stack()[0][3]
             utils.write_params_to_text(outfig,args,curr_file=curr_file,
                                        curr_func=curr_func)
+            
+def plotBeam(fhd_dir,pol='XX',color_scale=[-1763758,1972024],output_path='',prefix='beam',
+             write_pixel_coordinates=False,log_scale=False,ra_range=40,dec_range=40,fontsize=16,
+             savefig=False,write_params=True,outfig=''):
+    import glob
+    beamFile = glob.glob(f'{fhd_dir}/output_data/*_Beam_{pol}.fits')[0]
+    data = plot_fits.load_image(beamFile)
+    fig, ax = plt.subplots(1,1,figsize=(12,12))
+    im = plot_fits.plot_fits_image(data, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale,
+                                 ra_range=ra_range,dec_range=dec_range,title='Beam',fontsize=fontsize)
+    sources = plot_fits.gather_source_list()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    for s in sources:
+        if s[1] > ylim[0] and s[1] < ylim[1]:
+            if s[0] > xlim[0] and s[0] < xlim[1]:
+                if s[0] > 180:
+                    s = (s[0]-360,s[1],s[2])
+                if s[2] == 'LMC' or s[2] == 'SMC':
+                    ax.annotate(s[2],xy=(s[0],s[1]),xycoords='data',fontsize=8,xytext=(20,-20),
+                                 textcoords='offset points',arrowprops=dict(facecolor='red', shrink=2,width=1,
+                                                                            headwidth=4))
+                else:
+                    ax.scatter(s[0],s[1],c='r',s=10)
+                    if len(s[2]) > 0:
+                        if reverse_ra:
+                            ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
+                        else:
+                            ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+    if savefig:
+        plt.savefig(outfig)
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func=curr_func)
+    else:
+        plt.show()
 
 
 def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,singleSourceThresh=0.1,
@@ -618,7 +523,6 @@ def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,sin
                                                        singleSourceThresh=singleSourceThresh,
                                                        combine_fhd=combine_fhd,fluxCombType=np.sum,
                                                        beamCut=beamCut)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
     
     fig = plt.figure(figsize=(20,6))
     ax = fig.add_subplot(1,1,1)
@@ -644,25 +548,17 @@ def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,sin
     plt.hist(diffs[:,pind], bins=bins, alpha=0.5,fill=False,edgecolor='red',linewidth=2,density=True)
     plt.xlabel(f'{param} ({units})',fontsize=15)
     plt.ylabel('Count Density',fontsize=15)
-<<<<<<< HEAD
-    plt.title(f'{param} Pairwise Diff Histogram',fontsize=15)
-=======
     plt.title(f'{param} Pairwise Positional Difference Histogram',fontsize=15)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
 
     (mu, sigma) = norm.fit(diffs[:,pind])
     y = norm.pdf( bins, mu, sigma)
     l = plt.plot(bins, y, 'b--', linewidth=2)
 
     plt.axvline(np.mean(diffs[:,pind]),linestyle='--',color='k')
-<<<<<<< HEAD
-=======
-    
     if inc_errorbar:
         err = np.divide(sigma,np.sqrt(len(diffs[:,pind])))
         plt.axvline(np.mean(diffs[:,pind])+err,linestyle='--',color='k',alpha=0.5)
         plt.axvline(np.mean(diffs[:,pind])-err,linestyle='--',color='k',alpha=0.5)
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
 
     plt.text(s=f'Mean: {np.around(mu,5)}',x=0.8,y=0.8,transform = ax.transAxes,fontsize=12)
     plt.text(s=f'Std: {np.around(sigma,5)}',x=0.8,y=0.7,transform = ax.transAxes,fontsize=12)
