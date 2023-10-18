@@ -73,13 +73,13 @@ if ind > 0:
         print('%s has already been run - SKIPPING' % version)
     else:
         if args.license == 'NRAO':
-            print('Calling: idl -e run_h4c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
-            os.system("idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            print('Calling: idl -e run_h6c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            os.system("idl -e run_h6c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
         
         elif args.license == 'HERA':
-            print('Calling: /home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
-            os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            print('Calling: /home/heraidl/idl/bin/idl -e run_h6c_vivaldibeam_versions -args ' + filepath + " " + version + " " + args.outdir + " " + args.version_str)
+            os.system("/home/heraidl/idl/bin/idl -e run_h6c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir + " " + args.version_str)
         
 #         elif args.license == 'versions':
-#             print("Calling: /home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)
-#             os.system("/home/heraidl/idl/bin/idl -e run_h4c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)
+#             print("Calling: /home/heraidl/idl/bin/idl -e run_h6c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)
+#             os.system("/home/heraidl/idl/bin/idl -e run_h6c_vivaldibeam_versions -args " + filepath + " " + version + " " + args.outdir)

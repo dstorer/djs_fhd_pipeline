@@ -89,8 +89,8 @@ if os.path.isfile(f'{prefix}.SSINS.flags.h5'):
     print(f'Stopping because file {prefix}.SSINS.flags.h5 already exists')
     exit()
 
-version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
-version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
+# version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
+# version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
 
 # Make the uvflag object for storing flags later, and grab bls for partial I/O
 uvd = UVData()
@@ -209,7 +209,7 @@ mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggr
 
 # Do flagging
 mf.apply_match_test(ins, time_broadcast=True)
-ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
+# ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
 
 # cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 

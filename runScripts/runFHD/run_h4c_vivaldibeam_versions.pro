@@ -40,12 +40,11 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   ;subtract_sidelobe_catalog="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
 
   combine_obs=0
-  dimension=1024.
+  ;dimension=1024.
   max_sources=100000.
   pad_uv_image=1.
-  IF dimension GE 2048 THEN pad_uv_image=1.
+  ;IF dimension GE 2048 THEN pad_uv_image=1.
   precess=0 ;set to 1 ONLY for X16 PXX scans (i.e. Drift_X16.pro)
-  FoV=45
   no_ps=1 ;don't save postscript copy of images
   gain_factor=0.1
   min_baseline=1.
@@ -74,17 +73,310 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
 
   n_pol=2
   restore_vis_savefile=0
-  firstpass=1
   max_cal_iter=1000L
   ;use Fagnoni vivaldi efield beam model
   beam_model_version=4
+  mapfn_recalculate=0
   dft_threshold=1
   init_healpix
   
-  case_name='test_deconvolve_no_sidelobe_later_time_transfer_cal_fov71_dim_1024_beam_thresh_10'
-    
+  print, 'Running case: ' + case_name
+
   case case_name of
   
+    'medRes_IS_useInitialCalibration_from906_it2_noFov_uvbeamSupport_deconvolution': begin
+        cal_time_average=1
+        deconvolve=1
+        firstpass=0
+        psf_dim=54
+        beam_clip_floor=1
+        kbinsize=0.5
+        dimension=1024.
+        beam_threshold=0.1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_noFov_uvbeamSupport': begin
+        cal_time_average=1
+        deconvolve=0
+        beam_clip_floor=1
+        kbinsize=0.5
+        dimension=1024.
+        beam_threshold=0.1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+    end
+    
+    'deconvolve_no_sidelobe_nofov_dim_1024_beam_thresh_10_set_psf_dim_clip_floor': begin
+      ;fov=71.51
+      beam_clip_floor=1
+      kbinsize=0.5
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+      psf_dim=34
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_uvbeamSupport_outputHealpix': begin
+        degpix=0.0439453
+        cal_time_average=1
+        snapshot_healpix_export=1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'deconvolve_no_sidelobe_nofov_dim_1024_beam_thresh_10_set_psf_dim': begin
+      ;fov=71.51
+      kbinsize=0.5
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+      psf_dim=34
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'deconvolve_no_sidelobe_nofov_dim_1024_beam_thresh_10_smallerKbinsize': begin
+      ;fov=71.51
+      kbinsize=0.4
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'deconvolve_no_sidelobe_nofov_dim_2048_beam_thresh_10': begin
+      ;fov=71.51
+      kbinsize=0.5
+      dimension=2048.
+      firstpass=0
+      beam_threshold=0.1
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'deconvolve_no_sidelobe_nofov_dim_1024_beam_thresh_10': begin
+      ;fov=71.51
+      kbinsize=0.5
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'deconvolve_no_sidelobe_fov71_dim_1024_beam_thresh_10': begin
+      fov=71.51
+      ;kbinsize=0.313
+      dimension=1024.
+      firstpass=0
+      beam_threshold=0.1
+        
+      sidelobe_subtract=0
+      no_ps=1
+      no_png=1
+      export_images=1
+      recalculate_all = 0
+      calibrate_visibilities=1
+      uvfits_version = 5
+      uvfits_subversion = 1
+      max_deconvolution_components = 200000
+      deconvolve = 1
+      return_decon_visibilities = 1
+      deconvolution_filter = 'filter_uv_uniform'
+      filter_background = 1
+      return_cal_visibilities = 0
+      diffuse_calibrate = 0
+      diffuse_model = 0
+      cal_bp_transfer = 0
+      rephase_weights = 0
+      restrict_hpx_inds = 0
+      dft_threshold = 0
+      debug_region_grow = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+          initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+      ;version=case_name
+    end
+    
+    'uvbeamSupport_vivaldiPower': begin
+        cal_time_average=1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_power_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'uvbeamSupport_dipolePower': begin
+        cal_time_average=1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Dipole_power_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'uvbeamSupport_dipole': begin
+        cal_time_average=1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Dipole_efield_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_uvbeamSupport': begin
+        cal_time_average=1
+        import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_pyuvdataBeamImport_minCal40': begin
+        cal_time_average=1
+        min_cal_baseline=40
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_pyuvdataBeamImportDefaultBeam': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=1
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_pyuvdataBeamImportDeBoerBeam': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=2
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_pyuvdataBeamImportDipoleBeam': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=3
+    end
+    
+    'medRes_IS_useInitialCalibration_from906_it2_pyuvdataBeamImport': begin
+        cal_time_average=1
+        initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+        beam_model_version=4
+    end
+    
     'deconvolve_no_sidelobe_fov71_dim_1024_beam_thresh_10': begin
       fov=71.51
       ;kbinsize=0.313
@@ -597,15 +889,9 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
       allow_sidelobe_model_sources=0
       sidelobe_subtract=0
       no_ps=1
-<<<<<<< HEAD
-      no_png=0
-      export_images=1
-      recalculate_all = 0
-=======
       no_png=1
       export_images=0
       recalculate_all = 1
->>>>>>> 6eb850a7f12bf5fdb402fbe9597febaccdea09df
       calibrate_visibilities=1
       uvfits_version = 5
       uvfits_subversion = 1

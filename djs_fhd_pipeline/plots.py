@@ -11,10 +11,13 @@ import glob
 import json
 from pyuvdata import utils as pyutils
 from djs_fhd_pipeline import plot_fits
+import warnings
 
 dirpath = os.path.dirname(os.path.realpath(__file__))
 githash = utils.get_git_revision_hash(dirpath)
 curr_file = __file__
+
+warnings.filterwarnings("ignore", message='This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.')
 
 import json
 
@@ -22,8 +25,9 @@ def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=
     if raw is None:
         print('Reading raw')
         raw = UVData()
-        raw_file = sorted(glob.glob(f'{datadir}/*_raw_data_{pol}_0.uvfits'))
-#         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        raw_file = sorted(glob.glob(f'{datadir}/*_raw_data_{pol}*uvfits'))
+        # if not os.path.isfile(raw_file):
+        #     raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}_0.uvfits'
         raw.read(raw_file)
         raw.file_name = raw_file
     else:
@@ -32,6 +36,8 @@ def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=
         print('Reading cal')
         cal = UVData()
         cal_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}.uvfits'
+        if not os.path.isfile(cal_file):
+            cal_file = f'{datadir}/{jd}_fhd_calibrated_data_{pol}_0.uvfits'
         cal.read(cal_file)
         cal.file_name = cal_file
     else:
@@ -48,6 +54,8 @@ def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=
         print('Reading model')
         model = UVData()
         model_file = f'{datadir}/{jd}_fhd_model_data_{pol}.uvfits'
+        if not os.path.isfile(model_file):
+            model_file = f'{datadir}/{jd}_fhd_model_data_{pol}_0.uvfits'
         model.read(model_file)
         model.file_name=model_file
     else:
@@ -55,7 +63,9 @@ def readFiles(datadir, jd, raw=None, cal=None, model=None, gains=None, extraCal=
     if incGains is True and gains is None:
         print('Reading Gains')
         gains = UVCal()
-        gains_file = f'{datadir}/{jd}_fhd_gains_{pol}_0.uvfits'
+        gains_file = f'{datadir}/{jd}_fhd_gains_{pol}.uvfits'
+        if not os.path.isfile(gains_file):
+            gains_file = f'{datadir}/{jd}_fhd_gains_data_{pol}_0.uvfits'
         gains.read_calfits(gains_file)
         gains.file_name=gains_file
     else:
@@ -204,10 +214,18 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
     if plot_range=='all':
         plot_range = [0,nframes]
     for ind in range(plot_range[0],plot_range[1]):
-        print(str(ind).zfill(3))
+        if plot_range[1]-plot_range[0]>50:
+            if ind%20==0:
+                print(str(ind).zfill(3))
+        else:
+            print(str(ind).zfill(3))
         uv = UVData()
         fhd_files = [layout_files[ind],obs_files[ind],params_files[ind],dirty_vis_files[ind],flag_files[ind],settings_files[ind]]
-        uv.read_fhd(fhd_files,read_data=False)
+        try:
+            uv.read_fhd(fhd_files,read_data=False)
+        except:
+            print(f'COULD NOT READ FILE: {fhd_files}')
+            continue
         lst = uv.lst_array[0] * 3.819719 
         pos = [uv.phase_center_app_ra*57.2958,-31]
         _dec_range = [pos[1]-dec_range/2,pos[1]+dec_range/2]
@@ -302,9 +320,115 @@ def make_frames(fhd_path,uvfits_path,outdir,pol='XX',savefig=True,jd=2459122,ra_
         else:
             plt.show()
         plt.close()
+        
+def plotGainDelays(uvc,divideByK=True,baseline=(124,35),pol='XX',savefig=False,write_params=True,
+                  outfig='',subPhaseWrap=False, nb_path='', **kwargs):
+    args = locals()
+    from scipy import optimize
+    freqs = uvc.freq_array[0]*1e-6
+    taus = np.fft.fftshift(np.fft.fftfreq(freqs.size, np.diff(freqs)[0]*1e6))*1e9
+    inds = np.arange(0,len(freqs))
+    g1 = np.transpose(uvc.get_gains(baseline[0],pol))
+    g2 = np.transpose(uvc.get_gains(baseline[1],pol))
+    gplot = np.multiply(g2,np.conj(g1))
+    freqs *=1e6
+    
+    if subPhaseWrap:
+        g1 = removePhaseWrap(g1,freqs)
+        g2 = removePhaseWrap(g2,freqs)
 
+    gplot = np.multiply(g2,np.conj(g1))
+    gslice = gplot[20,:]
+
+
+    ds_lim=1500
+    # ds1 = np.fft.fftshift(np.fft.ifft(g1,axis=1))
+    ds1 = []
+    for row in g1:
+        d = np.fft.fftshift(np.fft.ifft(row))
+        ds1.append(d)
+    ds2 = []
+    for row in g1:
+        d = np.fft.fftshift(np.fft.ifft(row))
+        ds2.append(d)
+    ds1 = np.asarray(ds1)
+    ds2 = np.asarray(ds2)
+    # ds2 = np.fft.fftshift(np.fft.ifft(g2,axis=1))
+    tind1 = np.argmin(abs(np.subtract(taus,-ds_lim)))
+    tind2 = np.argmin(abs(np.subtract(taus,ds_lim)))
+    if (tind2-tind1)%2==0:
+        tind2+=1
+    taus = taus[tind1:tind2]
+    ds1 = ds1[:,tind1:tind2]
+    ds2 = ds2[:,tind1:tind2]
+    tticks = [int(i) for i in np.linspace(0, len(taus) - 1, 5)]
+    tticklabels = [int(taus[x]) for x in tticks]
+
+    if divideByK:
+        ds_div = np.exp(1j*taus)
+        ds1_div = np.divide(ds1,ds_div)
+        ds2_div = np.divide(ds2,ds_div)
+
+    fig, ax = plt.subplots(2,2,figsize=(16,10))
+    im = ax[0][0].imshow(np.angle(ds1),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    ax[0][0].set_title(f'Ant {baseline[0]}: Phase of delay of gains')
+    plt.colorbar(im,ax=ax[0])
+    im = ax[0][1].imshow(np.angle(ds1_div),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    ax[0][1].set_title(f'Ant {baseline[0]}: Normalized by bin')
+    plt.colorbar(im,ax=ax[1])
+    for a in ax[0]:
+        a.set_xticks(tticks)
+        a.set_xticklabels(tticklabels)
+    fig.suptitle(f'Ant {baseline[0]} gains')
+
+#     fig, ax = plt.subplots(1,2,figsize=(16,10))
+    im = ax[1][0].imshow(np.angle(ds2),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    ax[1][0].set_title(f'Ant {baseline[1]}: Phase of delay of gains')
+#     plt.colorbar(im,ax=ax[0])
+    im = ax[1][1].imshow(np.angle(ds2_div),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    ax[1][1].set_title(f'Ant {baseline[1]}: Normalized by bin')
+#     plt.colorbar(im,ax=ax[1])
+    for a in ax[1]:
+        a.set_xticks(tticks)
+        a.set_xticklabels(tticklabels)
+    fig.suptitle(f'Ant {baseline[1]} gains')
+    if savefig:
+        plt.savefig(outfig,bbox_inches='tight')
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func="plotGainDelays",githash=githash,nb_path=nb_path)
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
+
+def plotBeamSliceComparisons(fhddirs,labels,savefig=False,write_params=True,outfig='',
+                            nb_path='',peakNorm=False):
+    args = locals()
+    fig = plt.figure()
+    for i,d in enumerate(fhddirs):
+        beamdir = sorted(glob.glob(f'{d}/fhd_*'))[0]
+        beamFile = glob.glob(f'{beamdir}/output_data/*_Beam_XX.fits')[0]
+        data = plot_fits.load_image(beamFile).signal_arr
+        dslice = data[511,:]
+    #     fig = plt.figure()
+    #     plt.imshow(data,aspect='auto',interpolation='nearest')
+        plt.plot(dslice,label=labels[i])
+    plt.legend()
+    if savefig:
+        plt.savefig(outfig,bbox_inches='tight')
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func="plotBeamSliceComparisons",githash=githash,nb_path=nb_path)
+    else:
+        plt.show()
+        plt.close()
+        
 def plotBeam(fhd_dir,pol='XX',color_scale=[-1763758,1972024],output_path='',prefix='beam',
-             write_pixel_coordinates=False,log_scale=False,ra_range=40,dec_range=40,fontsize=16):
+             write_pixel_coordinates=False,log_scale=False,ra_range=40,dec_range=40,fontsize=16,
+             savefig=False,write_params=True,outfig=''):
     from djs_fhd_pipeline import plot_fits, plot_deconvolution
     beamFile = glob.glob(f'{fhd_dir}/output_data/*_Beam_{pol}.fits')[0]
     data = plot_fits.load_image(beamFile)
@@ -332,6 +456,152 @@ def plotBeam(fhd_dir,pol='XX',color_scale=[-1763758,1972024],output_path='',pref
                             ax.annotate(s[2],xy=(s[0]-3,s[1]-4),xycoords='data',fontsize=6)
                         else:
                             ax.annotate(s[2],xy=(s[0]+3,s[1]-4),xycoords='data',fontsize=6)
+    if savefig:
+        plt.savefig(outfig,bbox_inches='tight')
+        if write_params:
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_file=curr_file,
+                                       curr_func="plotBeam",githash=githash,nb_path=nb_path)
+    else:
+        plt.show()
+        plt.close()
+        
+def plotGainsSimple(raw=None,cal=None,gain=None,readVis=False,baseline=(124,35),savefig=False,outfig='',
+               write_params=True,pol='XX',datadir=None,jd=None,title='',subPhaseWrap=False,plot_ft=False,
+               ds_lim=None,gain_conv='divide',flip_gain_conj=True,**kwargs):
+    from matplotlib.colors import LogNorm
+    args = locals()
+    
+    if readVis:
+        raw, cal, _, gain = plots.readFiles(datadir,jd,pol=pol)
+        uvc, raw, cal, _ = trimVisTimes(raw,cal,None,gain)
+    
+    
+    r = np.asarray(raw.get_data(baseline[0],baseline[1],pol))
+    c = cal.get_data(baseline[0],baseline[1],pol)
+    g1 = np.transpose(gain.get_gains(baseline[0],pol))
+    g2 = np.transpose(gain.get_gains(baseline[1],pol))
+    gplot = np.multiply(g2,np.conj(g1))
+    fhdgains = np.multiply(g2,np.conj(g1))
+    
+    freqs = raw.freq_array[0]*1e-6
+    taus = np.fft.fftshift(np.fft.fftfreq(freqs.size, np.diff(freqs)[0]*1e6))*1e9
+    if ds_lim is not None:
+        tind1 = np.argmin(abs(np.subtract(taus,-ds_lim)))
+        tind2 = np.argmin(abs(np.subtract(taus,ds_lim)))
+        if (tind2-tind1)%2==0:
+            tind2+=1
+        taus = taus[tind1:tind2]
+    else:
+        tind1=0
+        tind2=len(taus)-1
+    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 5)]
+    xticklabels = [int(freqs[x]) for x in xticks]
+    tticks = [int(i) for i in np.linspace(0, len(taus) - 1, 5)]
+    tticklabels = [int(taus[x]) for x in tticks]
+    lsts = np.reshape(raw.lst_array* 3.819719,(raw.Ntimes,-1))[:,0]
+    yticks = [int(i) for i in np.linspace(0, len(lsts) - 1, 6)]
+    yticklabels = [np.around(lsts[ytick], 1) for ytick in yticks]
+    
+    if subPhaseWrap:
+        gplot = removePhaseWrap(gplot,freqs)
+
+    
+    fig = plt.figure(figsize=(16,8))
+    gs = fig.add_gridspec(2,3,wspace=0.2)
+    
+    # RAW
+    ax = fig.add_subplot(gs[0,0])
+    ax.set_ylabel('LST (hours)')
+    
+    im = ax.imshow(np.abs(r),interpolation='nearest',aspect='auto',cmap='viridis',
+             vmin=np.percentile(np.abs(r),8),vmax=np.percentile(np.abs(r),92))
+    ax.set_title('Raw')
+    ax.set_xticks([])
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    plt.colorbar(im)
+    ax = fig.add_subplot(gs[1,0])
+    ax.set_ylabel('LST (hours)')
+    if plot_ft:
+        ds = np.fft.fftshift(np.fft.ifft(r,axis=1))
+        ds = ds[:,tind1:tind2]
+        im = ax.imshow(np.abs(ds),interpolation='nearest',aspect='auto',cmap='viridis',
+                 vmin=np.percentile(np.abs(ds),8),vmax=np.percentile(np.abs(ds),92))
+#         im = ax.imshow(np.abs(ds),interpolation='nearest',aspect='auto',cmap='viridis',
+#                  norm=LogNorm(vmin=1000, vmax=np.percentile(np.abs(ds),98)))
+        ax.set_xticks(tticks)
+        ax.set_xticklabels(tticklabels)
+        ax.set_xlabel('Delay (ns)')
+    else:
+        im = ax.imshow(np.angle(r),interpolation='nearest',aspect='auto',vmin=-np.pi,vmax=np.pi,cmap='twilight')
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
+        ax.set_xlabel('Freq (MHz)')
+    plt.colorbar(im)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    
+    # GAINS
+    ax = fig.add_subplot(gs[0,1])
+    im = ax.imshow(np.abs(fhdgains),interpolation='nearest',aspect='auto',cmap='viridis',
+             vmin=np.percentile(np.abs(fhdgains),8),vmax=np.percentile(np.abs(fhdgains),92))
+    ax.set_yticks([])
+    plt.colorbar(im)
+    ax.set_title('g1 x g2*')
+    ax.set_xticks([])
+    ax = fig.add_subplot(gs[1,1])
+    if plot_ft:
+        ds = np.fft.fftshift(np.fft.ifft(fhdgains,axis=1))
+        ds = ds[:,tind1:tind2]
+        im = ax.imshow(np.abs(ds),interpolation='nearest',aspect='auto',cmap='viridis',
+                 vmin=np.percentile(np.abs(ds),8),vmax=np.percentile(np.abs(ds),92))
+        ax.set_xticks(tticks)
+        ax.set_xticklabels(tticklabels)
+        ax.set_xlabel('Delay (ns)')
+    else:
+        im = ax.imshow(np.angle(fhdgains),interpolation='nearest',aspect='auto',vmin=-np.pi,vmax=np.pi,cmap='twilight')
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
+        ax.set_xlabel('Freq (MHz)')
+    plt.colorbar(im)
+    ax.set_yticks([])
+    
+    #INITIAL CAL
+    ax = fig.add_subplot(gs[0,2])
+    im = ax.imshow(np.abs(c),interpolation='nearest',aspect='auto',cmap='viridis',
+             vmin=np.percentile(np.abs(c),8),vmax=np.percentile(np.abs(c),92))
+    ax.set_yticks([])
+    plt.colorbar(im)
+    ax.set_title('Calibrated')
+    ax.set_xticks([])
+    ax = fig.add_subplot(gs[1,2])
+    if plot_ft:
+        ds_raw = np.fft.fftshift(np.fft.ifft(c,axis=1))
+        ds_raw = ds_raw[:,tind1:tind2]
+        im = ax.imshow(np.abs(ds_raw),interpolation='nearest',aspect='auto',cmap='viridis',
+                 vmin=np.percentile(np.abs(ds_raw),8),vmax=np.percentile(np.abs(ds_raw),92))
+        ax.set_xticks(tticks)
+        ax.set_xticklabels(tticklabels)
+        ax.set_xlabel('Delay (ns)')
+    else:
+        im = ax.imshow(np.angle(c),interpolation='nearest',aspect='auto',vmin=-np.pi,vmax=np.pi,cmap='twilight')
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
+        ax.set_xlabel('Freq (MHz)')
+    plt.colorbar(im)
+    ax.set_yticks([])
+    
+    plt.suptitle(title)
+    
+    if savefig == True:
+        plt.savefig(outfig,facecolor='white')
+        if write_params:
+            utils.write_params_to_text(outfig,args,curr_func='plotGainsSimple',
+                   curr_file=curr_file,**kwargs)
+    else:
+        plt.show()
+    plt.close()
         
 def make_frames_withVis(datadir,fhd_path,uvfits_path,outdir,jd,pol='XX',savefig=True,ra_range=9,dec_range=9,
                nframes='all',file_ext='jpeg',outsuffix='',write_params=True,plot_range='all',
@@ -607,7 +877,7 @@ def plotDelayOfGains(uvc,baseline=(124,35),pol='XX',phaseWrapRemoval=True,savefi
     plt.close()
     
 def plotDelayOfGainsAndAutos(uvc,uvd,baseline=(124,35),pol='XX',phaseWrapRemoval=True,savefig=False,write_params=True,
-                             outfig='',ds_lim=1500,gsliceInd=20,**kwargs):
+                             outfig='',ds_lim=1500,gsliceInd=20,norm=np.angle,**kwargs):
     from scipy import optimize
     import scipy
     args = locals()
@@ -616,8 +886,8 @@ def plotDelayOfGainsAndAutos(uvc,uvd,baseline=(124,35),pol='XX',phaseWrapRemoval
     inds = np.arange(0,len(freqs))
     g1 = np.transpose(uvc.get_gains(baseline[0],pol))
     g2 = np.transpose(uvc.get_gains(baseline[1],pol))
-    a1 = uvd.get_data(baseline[0],baseline[0],pol)
-    a2 = uvd.get_data(baseline[1],baseline[1],pol)
+    a1 = abs(uvd.get_data(baseline[0],baseline[0],pol))
+    a2 = abs(uvd.get_data(baseline[1],baseline[1],pol))
     freqs *=1e6
     
     lsts = uvc.lst_range * 3.819719
@@ -650,45 +920,61 @@ def plotDelayOfGainsAndAutos(uvc,uvd,baseline=(124,35),pol='XX',phaseWrapRemoval
     dsG2 = dsG2[:,tind1:tind2]
     dsA1 = dsA1[:,tind1:tind2]
     dsA2 = dsA2[:,tind1:tind2]
-    dsgp = dsgp[:,tind1:tind2]
+    dsGp = dsGp[:,tind1:tind2]
     tticks = [int(i) for i in np.linspace(0, len(taus) - 1, 5)]
     tticklabels = [int(taus[x]) for x in tticks]
+    if norm==np.angle:
+        vminA=-np.pi
+        vminG=-np.pi
+        vminGp=-np.pi
+        vmaxA=np.pi
+        vmaxG=np.pi
+        vmaxGp=np.pi
+        cmap='twilight'
+    else:
+        vminG = np.percentile(norm(dsG1),2)
+        vmaxG = np.percentile(norm(dsG1),98)
+        vminGp = np.percentile(norm(dsGp),2)
+        vmaxGp = np.percentile(norm(dsGp),98)
+        vminA = np.percentile(norm(dsA1),2)
+        vmaxA = np.percentile(norm(dsA1),98)
+        cmap='viridis'
 
     fig, ax = plt.subplots(1,5,figsize=(16,8))
-    im = ax[0].imshow(np.angle(dsA1),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    im = ax[0].imshow(norm(dsA1),vmin=vminA,vmax=vmaxA,cmap=cmap,aspect='auto',interpolation='nearest')
     plt.colorbar(im,ax=ax[0])
     ax[0].set_xticks(tticks)
     ax[0].set_xticklabels(tticklabels)
     ax[0].set_title(f'Ant {baseline[0]} Auto')
-    ax[0].set_yticks(yticks)
-    ax[0].set_yticklabels(yticklabels)
-    im = ax[1].imshow(np.angle(dsG1),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    ax[0].set_yticks(yticksA)
+    ax[0].set_yticklabels(yticklabelsA)
+    im = ax[1].imshow(norm(dsG1),vmin=vminG,vmax=vmaxG,cmap=cmap,aspect='auto',interpolation='nearest')
     plt.colorbar(im,ax=ax[1])
     ax[1].set_xticks(tticks)
     ax[1].set_xticklabels(tticklabels)
     ax[1].set_title(f'Ant {baseline[0]} Gain')
     ax[1].set_yticks(yticks)
     ax[1].set_yticklabels(yticklabels)
-    im = ax[2].imshow(np.angle(dsgp),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    im = ax[2].imshow(norm(dsGp),vmin=vminGp,vmax=vmaxGp,cmap=cmap,aspect='auto',interpolation='nearest')
     plt.colorbar(im,ax=ax[2])
     ax[2].set_xticks(tticks)
     ax[2].set_xticklabels(tticklabels)
     ax[2].set_yticks([])
     ax[2].set_title(f'g{baseline[0]} x g{baseline[1]}*')
-    im = ax[3].imshow(np.angle(dsG2),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    im = ax[3].imshow(norm(dsG2),vmin=vminG,vmax=vmaxG,cmap=cmap,aspect='auto',interpolation='nearest')
     plt.colorbar(im,ax=ax[3])
     ax[3].set_xticks(tticks)
     ax[3].set_xticklabels(tticklabels)
     ax[3].set_title(f'Ant {baseline[1]} Gain')
     ax[3].set_yticks(yticks)
     ax[3].set_yticklabels(yticklabels)
-    im = ax[4].imshow(np.angle(dsA2),vmin=-np.pi,vmax=np.pi,cmap='twilight',aspect='auto',interpolation='nearest')
+    im = ax[4].imshow(norm(dsA2),vmin=vminA,vmax=vmaxA,cmap=cmap,aspect='auto',interpolation='nearest')
     plt.colorbar(im,ax=ax[4])
     ax[4].set_xticks(tticks)
     ax[4].set_xticklabels(tticklabels)
     ax[4].set_title(f'Ant {baseline[1]} Auto')
-    ax[4].set_yticks(yticks)
-    ax[4].set_yticklabels(yticklabels)
+    ax[4].set_yticks(yticksA)
+    ax[4].set_yticklabels(yticklabelsA)
     
     for a in ax:
         a.set_xlabel('Delay (ns)')
@@ -739,9 +1025,9 @@ def plotGainComponentsByTime(uvc,baseline=(124,35),pol='XX',phaseWrapRemoval=Tru
     axp[0].plot(abs(g1slice),label='abs',color='black')
     axp[1].plot(np.real(g1slice),label='real',color='black')
     axp[2].plot(np.imag(g1slice),label='imag',color='black')
-    axp[0].set_title('g1: abs')
-    axp[1].set_title('g1: real')
-    axp[2].set_title('g1: imag')
+    axp[0].set_title(f'g{baseline[0]}: abs')
+    axp[1].set_title(f'g{baseline[0]}: real')
+    axp[2].set_title(f'g{baseline[0]}: imag')
 
     fig, axp = plt.subplots(1,3,figsize=(16,8))
     g2slice = g2[20,:]
@@ -752,9 +1038,9 @@ def plotGainComponentsByTime(uvc,baseline=(124,35),pol='XX',phaseWrapRemoval=Tru
     axp[0].plot(abs(g2slice),label='abs',color='black')
     axp[1].plot(np.real(g2slice),label='real',color='black')
     axp[2].plot(np.imag(g2slice),label='imag',color='black')
-    axp[0].set_title('g2: abs')
-    axp[1].set_title('g2: real')
-    axp[2].set_title('g2: imag')
+    axp[0].set_title(f'g{baseline[1]}: abs')
+    axp[1].set_title(f'g{baseline[1]}: real')
+    axp[2].set_title(f'g{baseline[1]}: imag')
         
     if savefig == True:
         plt.savefig(outfig,facecolor='white')
@@ -837,6 +1123,7 @@ def plotGainFit(fit='ones',raw=None,cal=None,gain=None,readVis=False,baseline=(1
         
     if useUvcal:
         gain.gain_convention=gain_conv
+        gain.check()
         cfit = pyutils.uvcalibrate(raw,gain,inplace=False,flip_gain_conj=flip_gain_conj)
         calFit = cfit.get_data(baseline[0],baseline[1],pol)
         gmult = np.repeat(gplot,repeats=5,axis=0)
@@ -1021,6 +1308,8 @@ def plotPerAntCrossesAll(datadir, jd, raw=None, pol='XX', savefig=False, write_p
                        file_ext='jpeg',NantsPlot='all',nb_path=None, visNorm=np.abs):
     if raw==None:
         raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}.uvfits'
+        if not os.path.isfile(raw_file):
+            raw_file = f'{datadir}/{jd}_fhd_raw_data_{pol}_0.uvfits'
         raw = UVData()
         raw.read(raw_file)
     args = locals()

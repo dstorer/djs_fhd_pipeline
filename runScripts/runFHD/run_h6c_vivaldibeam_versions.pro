@@ -2,6 +2,16 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   except=!except
   !except=0
   heap_gc
+
+  ; parse command line args
+  args = command_line_args(count=nargs)
+  print, nargs
+  vis_file_list=args[0]
+  print, args[0]
+  version=args[1]
+  print, args[1]
+  output_directory = args[2]
+  case_name=args[3]
   
   instrument = 'hera'
 
@@ -15,9 +25,10 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   recalculate_all=1
   no_png=1
   cleanup=0
+  ps_export=0
 
-  catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
-  calibration_catalog_file_path="/Users/dstorer/repos/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+  catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
+  calibration_catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
 
   calibration_auto_initialize=0
 
@@ -50,11 +61,41 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   dft_threshold=0
   init_healpix
 
-  case_name='cal_noFov_antenna_size_22'
-  
+  print, 'Running case: ' + case_name
   
   case case_name of
 
+    'cal_forEllie_noFov_antenna_size_22_it2': begin
+      deconvolve=0
+      beam_clip_floor=1
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+
+      sidelobe_subtract=0
+      export_images=0
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459864/fhdOutput/cal_forEllie_noFov_antenna_size_22/fhd_2459864.3021791037_cal_forEllie_noFov_antenna_size_22_mid_4/calibration/zen.2459864.3021791037_mid_5obs_1_cal.sav'
+    end
+    
+    'cal_forEllie_noFov_antenna_size_22': begin
+      beam_clip_floor=1
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+
+      sidelobe_subtract=0
+      export_images=0
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
+    end
+    
     'cal_noFov_antenna_size_22': begin
       beam_clip_floor=1
       kbinsize=0.5

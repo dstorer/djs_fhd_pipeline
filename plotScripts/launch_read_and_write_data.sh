@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-while getopts ":r:f:s:o:x:j:p:R:S:C:M:J:L:B:G:D:I:V:" option
+while getopts ":r:f:s:o:x:j:p:R:S:C:M:J:L:B:G:D:I:V:n:" option
 do
     case $option in
         r) raw_files=$OPTARG;;
@@ -22,6 +22,7 @@ do
         D) DIRS=$OPTARG;;
         I) ITER=$OPTARG;;
         V) CONV=$OPTARG;;
+        n) NAME=$OPTARG;;
         \?) echo "Unknown option: Accepted flags are -f (obs_file_name),"
         exit 1;;
         :) echo "Missing option argument for input flag"
@@ -29,4 +30,4 @@ do
   esac
 done
 
-sbatch --export=raw_files=${raw_files},fhd_files=${fhd_files},ssins_files=${ssins_files},outdir=${outdir},exants=${exants},jd=${jd},pol=${pol},RAW=${RAW},SSINS=${SSINS},CAL=${CAL},MODEL=${MODEL},JDS=${JDS},LSTS=${LSTS},BLS=${BLS},GAINS=${GAINS},DIRS=${DIRS},ITER=${ITER},CONV=${CONV} -p hera -o ${outdir}/read_and_write_data_model_${pol}.out --mem=120G -J write_data --mail-user=darajstorer@gmail.com --mail-type=END  /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/call_read_and_write_data.sh
+sbatch --export=raw_files=${raw_files},fhd_files=${fhd_files},ssins_files=${ssins_files},outdir=${outdir},exants=${exants},jd=${jd},pol=${pol},RAW=${RAW},SSINS=${SSINS},CAL=${CAL},MODEL=${MODEL},JDS=${JDS},LSTS=${LSTS},BLS=${BLS},GAINS=${GAINS},DIRS=${DIRS},ITER=${ITER},CONV=${CONV} -p hera -o ${outdir}/read_and_write_data_${NAME}_${pol}.out --mem=120G -J ${NAME} --mail-user=darajstorer@gmail.com --mail-type=END  /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/plotScripts/call_read_and_write_data.sh

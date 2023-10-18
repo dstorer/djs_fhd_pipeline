@@ -74,6 +74,11 @@ f = open(args.raw_files, "r")
 raw_data = f.read().split('\n')[0:-1]
 f = open(args.fhd_files, "r")
 fhd_files = f.read().split('\n')[0:-1]
+
+# # CLIPPING RANGE OF FHD OUTPUTS TO READ
+# fhd_files = fhd_files[150:]
+# raw_data = raw_data[150:251]
+
 if int(args.SSINS)==1:
     f = open(args.ssins_files, "r")
     ssins_files = f.read().split('\n')[0:-1]
@@ -197,7 +202,8 @@ for i,flist in enumerate(fhd_file_array):
 # Nblts = raw.Nblts
 # print(f'\nData has {Ntimes} time stamps\n')
 # Nbls = raw.Nbls
-# Nfreqs = len(freqs)
+freq_array = calData.freq_array[0]
+Nfreqs = len(freq_array)
 # Npols = raw.Npols
 # antpairs = np.asarray(raw.get_antpairs())
 if int(args.BLS) == 1:
@@ -320,6 +326,10 @@ if int(args.GAINS) == 1:
             if len(calfiles)==0:
                 continue
             g = UVCal()
+            file = open(f'{args.outdir}/fnames.txt','w')
+            for f in calfiles:
+                file.write(f+'\n')
+            file.close()
             g.read_fhd_cal(cal_file=calfiles,obs_file=obsfiles,layout_file=layoutfiles,settings_file=settingsfiles,
                         run_check=False,run_check_acceptability=False)
             file = f'{args.outdir}/{args.juliandate}_fhd_gains_{polname}_{ngainsets}.uvfits'
@@ -348,7 +358,7 @@ if int(args.GAINS) == 1:
     del g
 
 if int(args.CAL) == 1:
-    print('Reading calibrated data') 
+    print('\n Reading calibrated data \n') 
     nobs = int(args.nobs)
     mini = UVData()
     mini.read(fhd_file_array[0])

@@ -153,7 +153,8 @@ for i in range(0,len(file_names),N):
     print(f'Phasing observation to time {phaseCenter}')
     uvd.phase_to_time(phaseCenter)
     print('Writing to uvfits')
-#     uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs_{args.ind}.uvfits',spoof_nonessential=True)
+    if int(args.write_minis) == 0:
+        uvd.write_uvfits(f'{args.outdir}/{version}_{len(np.unique(uvd.time_array))}obs_{args.ind}.uvfits')
     if int(args.write_minis) == 1:
         print('Unique times are:')
         print(np.unique(uvd.time_array))
@@ -164,4 +165,4 @@ for i in range(0,len(file_names),N):
             uv_single = uvd.select(times=times,inplace=False)
             phaseCenter = np.median(np.unique(uv_single.time_array))
             uv_single.phase_to_time(phaseCenter)
-            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}obs_{args.ind}.uvfits',spoof_nonessential=True)
+            uv_single.write_uvfits(f'{args.outdir}/zen.{times[0]}_{args.band}_{nint}obs_{args.ind}.uvfits')
