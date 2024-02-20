@@ -83,13 +83,14 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
   print, 'Running case: ' + case_name
 
   case case_name of
-  
+    
     'medRes_IS_useInitialCalibration_from906_it2_noFov_uvbeamSupport_deconvolution': begin
         cal_time_average=1
         deconvolve=1
         firstpass=0
         psf_dim=54
         beam_clip_floor=1
+        export_images=1
         kbinsize=0.5
         dimension=1024.
         beam_threshold=0.1
@@ -104,6 +105,7 @@ PRO run_h4c_vivaldibeam_versions,_Extra=extra
         kbinsize=0.5
         dimension=1024.
         beam_threshold=0.1
+        export_images=1
         import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
         initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/fhdOutput/initialCalFrom906/fhd_2459906.306753304_medRes_IS_useInitialCalibration_from906_mid_97/calibration/zen.2459906.306753304_mid_5obs_24_cal.sav'
     end

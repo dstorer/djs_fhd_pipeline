@@ -24,7 +24,9 @@ do
   esac
 done
 
+#  --dependency=afterany:3334729
+
 echo "band: ${band}"
 echo "Calling: /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh"
 
-sbatch --export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants},license=${license} --array=${x} -o ${outdir}/FHD_${band}%a.out -n 1 -N 1 --mem=120G -J FHD_${num_prefix} -p hera /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh
+sbatch --export=obs_file_name=${obs_file_name},outdir=${outdir},version_str=${version_str},band=${band},exants=${exants},license=${license} --array=${x} -o ${outdir}/outlogs/FHD_${band}%a.out -n 1 -N 1 --mem=120G -J FHD_${num_prefix} -p hera --begin=now --dependency=afterany:3510063 /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runFHD/wrapper2_arrayJob.sh

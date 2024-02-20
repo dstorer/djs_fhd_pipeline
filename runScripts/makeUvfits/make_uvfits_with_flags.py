@@ -12,6 +12,8 @@ import h5py
 import hdf5plugin
 import subprocess
 from hera_commissioning_tools import utils as com_utils
+from djs_fhd_pipeline import utils as djs_utils
+import yaml
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f','--obs_files', help='The path to a txt file containing the path to all raw uvh5 files to be executed on')
@@ -21,6 +23,8 @@ parser.add_argument('-N','--N_combine', help='Number of raw files to combine int
 parser.add_argument('-b','--band', help='Frequency band (low, med, or high) to write out')
 parser.add_argument("-x", "--xants",
                     help="The path to a yml file containing a list of antennas to exclude")
+parser.add_argument("-p", "--per_pol",
+                    help="Option to allow polarizations to have different xant sets. Requires there to be versions of xants_file with suffixes _X.yml and _Y.yml. Set to 1 to turn on, 0 to turn off.")
 parser.add_argument("-I", "--internode_only", type=int, default=0,
                     help="The number of baselines to read in at a time")
 parser.add_argument("-S", "--intersnap_only", type=int, default=0,
@@ -32,10 +36,12 @@ parser.add_argument("-a", "--array_job", default=0,
                     help='Indicates whether the job is an array job. If so, only one file, indicated by --ind, will be exected. Otherwise, all files in obs_files will be executed')
 parser.add_argument("--ind", default=0,
                     help='File index to run on')
-parser.add_argument('-p', '--phase', default='perobs',
+parser.add_argument('-e', '--phase', default='perobs',
                     help='Option to phase the data to the center of each observation (perobs) or to the center of the whole set of observations (perset)')
 args = parser.parse_args()
+per_pol = int(args.per_pol)
 
+# Writing metadata and code versions to output file
 print('\n')
 curr_path = os.path.abspath(__file__)
 print(f'running {curr_path}')
@@ -57,8 +63,7 @@ jds = [x.split('/')[-1].split('.sum')[0][4:] for x in file_names[:-1]]
 jds = [float(j) for j in jds]
 mid_jd = jds[len(jds)//2]
 
-with open(args.xants, 'r') as xfile:
-    xants = yaml.safe_load(xfile)
+
 
 array_job = args.array_job
 print(f'array_job: {array_job}')
@@ -73,17 +78,28 @@ for i in range(0,len(file_names),N):
     elif i==0:
         print('Running all files in obs_files')
     data = file_names[i:i+N]
-#     print(data)
     fname = data[0].split('/')[-1][0:-5]
-#     print(fname)
     ssins = ssins_files[i//N]
     print('SSINS file:')
     print(ssins)
     print('\nreading data \n')
     uvd = UVData()
     uvd.read(data)
-    use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
-    uvd.select(antenna_nums=use_ants)
+    if per_pol==0:
+        with open(args.xants, 'r') as xfile:
+            xants = yaml.safe_load(xfile)
+        use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
+        uvd.select(antenna_nums=use_ants)
+    elif per_pol==1:
+        exants_x = f'{args.xants}_X.yml'
+        exants_y = f'{args.xants}_Y.yml'
+        if os.path.isfile(exants_x) and os.path.isfile(exants_y):
+            print('Performing per-polarization antenna flagging')
+            uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y)
+        else:
+            raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_<X and Y>.yml must exist."
+    else:
+        raise "Per pol must be set to either 0 or 1."
     print('Reading SSINS \n')
     uvf = UVFlag()
     uvf.read(ssins)
@@ -129,14 +145,20 @@ for i in range(0,len(file_names),N):
                     print(f'ERROR - One of {key1} or {key2} not found in database!')
                     continue
         uvd.select(bls=snap_bls)
+
+    # Apply ssins flags
     print('Applying flags')
     utils.apply_uvflag(uvd,uvf)
+
+    # Phasing
     if args.phase == 'perobs':
         phaseCenter = np.median(np.unique(uvd.time_array))
     elif args.phase == 'perset':
         phaseCenter = mid_jd
     else:
         print(f'ERROR! phase argument must be set to either perobs or perset. Currently set to {args.phase}')
+
+    # Frequency band selection
     if args.band=='low':
         # 60-85 MHz
         print(f'Selecting freqs in index range [108,312]')
@@ -149,6 +171,8 @@ for i in range(0,len(file_names),N):
         # 200-220 MHz
         print(f'Selecting freqs in index range [1254,1418]')
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
+
+    # Write files
     version = f'{fname}_{args.band}'
     print(f'Phasing observation to time {phaseCenter}')
     uvd.phase_to_time(phaseCenter)

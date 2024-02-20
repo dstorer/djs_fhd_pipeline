@@ -48,6 +48,8 @@ else:
 
 if not os.path.exists(args.outdir):
     os.makedirs(args.outdir)
+if not os.path.exists(f'{args.outdir}/outlogs'):
+    os.makedirs(f'{args.outdir}/outlogs')
 
 ind = int(args.SLURM_ARRAY_TASK_ID)
 if ind > 0:

@@ -76,8 +76,8 @@ f = open(args.fhd_files, "r")
 fhd_files = f.read().split('\n')[0:-1]
 
 # # CLIPPING RANGE OF FHD OUTPUTS TO READ
-# fhd_files = fhd_files[150:]
-# raw_data = raw_data[150:251]
+# fhd_files = fhd_files[0:258]
+# raw_data = raw_data[0:258]
 
 if int(args.SSINS)==1:
     f = open(args.ssins_files, "r")

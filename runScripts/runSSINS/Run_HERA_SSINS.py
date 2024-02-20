@@ -60,6 +60,7 @@ if args.clobber == 1:
     clobber = True
 else:
     clobber = False
+clobber = True
     
 curr_path = os.path.abspath(__file__)
 print(f'Running {curr_path}')
@@ -69,6 +70,9 @@ print(f'djs_fhd_pipeline githash: {githash}')
 print(f'pyuvdata version: {pyuvdata.__version__}')
 print(f'SSINS version: {SSINS.__version__}')
 ncomb = args.n_combine
+
+if not os.path.isdir(args.prefix):
+    os.mkdir(args.prefix)
 
 f = open(args.filename, "r")
 file_names = f.read().split('\n')
@@ -85,9 +89,10 @@ print(f'Running on {f1}')
 name = f1.split('/')[-1][0:-5]
 prefix = f'{args.prefix}/{name}_{i}'
 print(f'Prefix: {prefix}')
-if os.path.isfile(f'{prefix}.SSINS.flags.h5'):
-    print(f'Stopping because file {prefix}.SSINS.flags.h5 already exists')
-    exit()
+
+# if os.path.isfile(f'{prefix}.SSINS.flags.h5'):
+#     print(f'Stopping because file {prefix}.SSINS.flags.h5 already exists')
+#     exit()
 
 # version_info_list = [f'{key}: {version.version_info[key]}, ' for key in version.version_info]
 # version_hist_substr = reduce(lambda x, y: x + y, version_info_list)
@@ -188,7 +193,7 @@ ins.write(prefix, sep='.', clobber=clobber)
 ins.write(prefix, output_type='z_score', sep='.', clobber=clobber)
 
 # Write out plots
-# cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+cp.INS_plot(ins, f'{prefix}_RAW', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 #     ins.write(prefix)
 #     ins.write(prefix, output_type='z_score')
 
@@ -211,7 +216,7 @@ mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggr
 mf.apply_match_test(ins, time_broadcast=True)
 # ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
 
-# cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
+cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
 
 # Write outputs
 #     ins.write(prefix, output_type='flags', uvf=uvf)

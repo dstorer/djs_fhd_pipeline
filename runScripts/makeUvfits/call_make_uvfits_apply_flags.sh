@@ -7,6 +7,7 @@ echo "There are $N_obs observations in this file"
 echo "----------------------- ARGS -----------------------"
 echo "raw_file: ${obs_file_name}"
 echo "xants_file: ${xants}"
+echo "per_pol: ${per_pol}"
 echo "ssins_files: ${ssins_files}"
 echo "band: ${band}"
 echo "N_combine: ${N_combine}"
@@ -19,7 +20,7 @@ echo "phase: ${phase}"
 
 
 
-python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times} --ind ${SLURM_ARRAY_TASK_ID} -a ${array_job} -p ${phase}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -p ${per_pol} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times} --ind ${SLURM_ARRAY_TASK_ID} -a ${array_job} -e ${phase}
 
 echo "JOB INFO"
 squeue -j $SLURM_JOBID

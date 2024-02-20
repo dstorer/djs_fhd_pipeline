@@ -65,6 +65,109 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   
   case case_name of
 
+    'uvbeam_support_import_az_za_antSize14_855initialCal_testStokesIHack': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      n_pol=2
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
+    'uvbeam_support_import_az_za_antSize14_855initialCal': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
+    'uvbeam_support_import_az_za_antSize14_initialCalSmooth': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/906_initialCal_smooth.sav'
+    end
+    
+    'uvbeam_support_import_az_za_antSize14_initialCalv2': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/906_initialCal_v2.sav'
+    end
+    
+    'uvbeam_support_import_az_za_antSize14_deconvolution': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=1
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/906_initialCal.sav'
+    end
+    
+    'uvbeam_support_import_az_za_antSize14': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/906_initialCal.sav'
+    end
+    
     'cal_forEllie_noFov_antenna_size_22_it2': begin
       deconvolve=0
       beam_clip_floor=1
