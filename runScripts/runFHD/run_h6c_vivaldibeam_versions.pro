@@ -73,6 +73,7 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
       beam_threshold=0.1
       deconvolve=0
       n_pol=2
+      save_beam_metadata_only=1
 
       sidelobe_subtract=0
       export_images=1

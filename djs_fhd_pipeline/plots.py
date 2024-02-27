@@ -3168,6 +3168,7 @@ def plot_autos(
     dtype="sky",
     freq_range='all',
     freq_range_type='index',
+    exants=[],
 ):
     """
 
@@ -3200,6 +3201,18 @@ def plot_autos(
     from hera_mc import cm_active
     import math
     from matplotlib import pyplot as plt
+    import yaml
+
+    if type(exants)==str:
+        # If only one file is passed, assume it applies to both polarizations.
+        exants = [exants,exants]
+    xants = {}
+    if len(exants)>0:
+        for i,f in enumerate(exants):
+            with open(f, 'r') as xfile:
+                x = np.asarray(yaml.safe_load(xfile))
+                print(x)
+            xants[i] = x
 
     nodes, antDict, inclNodes = utils.generate_nodeDict(uvd)
     sorted_ants, sortedSnapLocs, sortedSnapInputs = utils.sort_antennas(uvd)
@@ -3365,12 +3378,18 @@ def plot_autos(
             ax.set_ylim(ylim)
             ax.grid(False, which="both")
             abb = status_abbreviations[status]
-            if a in wrongAnts:
+            if (len(xants) == 1 and a in exants[0]) or (len(xants)>1 and a in xants[0] and a in xants[1]):
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="purple")
+            elif len(xants)>1 and a in xants[0]:
                 ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="red")
-            else:
+            elif len(xants)>1 and a in xants[1]:
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="blue")
+            elif xants=={}:
                 ax.set_title(
                     f"{a} ({abb})", fontsize=10, backgroundcolor=status_colors[status]
                 )
+            else:
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="green")
             if k == 0:
                 if time_slice:
                     ax.legend(loc='upper left',bbox_to_anchor=(0, 1.7),ncol=2)
@@ -3436,6 +3455,7 @@ def plot_wfs(
     lst_range='all',
     return_times=False,
     plotFlags=False,
+    exants=[],
 ):
     """
     Function to plot auto waterfalls of all antennas, with a row for each node, sorted by SNAP and within that by
@@ -3480,7 +3500,19 @@ def plot_wfs(
     """
     from hera_mc import cm_active
     import numpy.ma as ma
+    import yaml
 
+    if type(exants)==str:
+        # If only one file is passed, assume it applies to both polarizations.
+        exants = [exants,exants]
+    xants = {}
+    if len(exants)>0:
+        for i,f in enumerate(exants):
+            with open(f, 'r') as xfile:
+                x = np.asarray(yaml.safe_load(xfile))
+                print(x)
+            xants[i] = x
+    
     nodes, _, inclNodes = utils.generate_nodeDict(uvd)
     sorted_ants, sortedSnapLocs, sortedSnapInputs = utils.sort_antennas(uvd)
     freqs = (uvd.freq_array[0]) * 10 ** (-6)
@@ -3651,12 +3683,18 @@ def plot_wfs(
                 print(
                     "##### plotType parameter must be either raw, mean_sub, or delay #####"
                 )
-            if a in wrongAnts:
+            if (len(xants) == 1 and a in exants[0]) or (len(xants)>1 and a in xants[0] and a in xants[1]):
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="purple")
+            elif len(xants)>1 and a in xants[0]:
                 ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="red")
-            else:
+            elif len(xants)>1 and a in xants[1]:
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="blue")
+            elif xants=={}:
                 ax.set_title(
                     f"{a} ({abb})", fontsize=10, backgroundcolor=status_colors[status]
                 )
+            else:
+                ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="green")
             if i == len(inclNodes) - 1:
                 ax.set_xticks(xticks)
                 ax.set_xticklabels(xticklabels)
@@ -3696,6 +3734,285 @@ def plot_wfs(
         cbar_ax = fig.add_axes([0.91, pos.y0, 0.01, pos.height])
         cbar = fig.colorbar(im, cax=cbar_ax)
         cbar.set_label(f"Node {n}", rotation=270, labelpad=15)
+    if savefig is True:
+        plt.savefig(outfig, bbox_inches="tight", dpi=100)
+        if write_params:
+            args = locals()
+            curr_func = inspect.stack()[0][3]
+            utils.write_params_to_text(outfig,args,curr_func,curr_file,githash)
+    plt.show()
+    plt.close()
+    if return_times:
+        return times
+
+
+def plot_gain_wfs(
+    datadir,
+    pol="XX",
+    plotType="raw",
+    savefig=False,
+    write_params=True,
+    vmin=0,
+    vmax=100,
+    wrongAnts=[],
+    plot_nodes='all',
+    logscale=False,
+    uvd_diff=None,
+    outfig="",
+    dtype="sky",
+    _data_cleaned_sq="auto",
+    freq_range='all',
+    freq_range_type='index',
+    lst_range='all',
+    return_times=False,
+    plotFlags=False,
+    file_range='all',
+    exants=[],
+):
+    """
+    Function to plot auto waterfalls of all antennas, with a row for each node, sorted by SNAP and within that by
+    SNAP input.
+
+    Parameters:
+    -----------
+    uvd: UVData Object
+        UVData object containing all sum data to plot.
+    pol: String
+        Polarization to plot. Can be any polarization string accepted by pyuvdata.
+    plotType: String
+        Option to specify what data to plot. Can be 'raw' (raw visibilities), 'mean_sub' (the average spectrum over the night is subtracted out), or 'delay' (delay spectra).
+    savefig: Boolean
+        Option to write out the figure
+    vmin: float
+        Colorbar minimum value. Set to None to use default values, which vary depending on dtype and plotType.
+    vmax: float
+        Colorbar maximum value. Set to None to use default values, which vary depending on dtype and plotType.
+    wrongAnts: List
+        Optional, list of antennas that are identified as observing the wrong datatype (seeing the sky when we are
+        trying to observe load, for example) or are severely broken/dead. These antennas will be greyed out and
+        outlined in red.
+    logscale: Boolean
+        Option to use a logarithmic colorbar.
+    uvd_diff: UVData Object
+        Diff data corresponding to the sum data in uvd. Required when metric is set.
+    metric: String or None
+        When metric is None the standard sum data is plot. Set metric to 'even' or 'odd' to plot those values instead.
+        Providing uvd_diff is required when this parameter is used.
+    outfig: String
+        Path to write out the figure if savefig is True.
+    dtype: String or None
+        Can be 'sky', 'load', 'noise', or None. If set to 'load' or 'noise' the vmin and vmax parameters will be
+        automatically changed to better suit those datatypes. If you want to manually set vmin and vmax, set this
+        parameter to None.
+
+    Returns:
+    --------
+    None
+
+    """
+    from hera_mc import cm_active
+    import numpy.ma as ma
+    import yaml
+
+    if type(exants)==str:
+        # If only one file is passed, assume it applies to both polarizations.
+        exants = [exants,exants]
+    xants = {}
+    if len(exants)>0:
+        for i,f in enumerate(exants):
+            with open(f, 'r') as xfile:
+                x = np.asarray(yaml.safe_load(xfile))
+            xants[i] = x
+    print(len(xants))
+    print(xants)
+    
+    
+    calfiles = sorted(glob.glob(f'{datadir}/*/calibration/*cal.sav'))
+    dirnames = sorted(glob.glob(f'{datadir}/fhd_*'))
+    file_inds = [int(c.split('_')[-1]) for c in dirnames]
+    
+    print(f'Found {len(calfiles)} cal files ranging from index {file_inds[0]} to {file_inds[-1]}')
+    _,uvd,_,_ = djs_utils.read_fhd(datadir,pol=['XX','YY'],readModel=False,readGains=False,readRaw=False,file_range=file_inds[0])
+    jd = dirnames[0].split('/')[-1][4:11]
+    print(f'Plotting for jd {jd}')
+    if file_range != 'all':
+        print('Clipping file range')
+        ind0 = np.argmin(np.abs(np.subtract(file_inds,file_range[0])))
+        ind1 = np.argmin(np.abs(np.subtract(file_inds,file_range[1])))
+        # print(np.subtract(file_inds,file_range[1]))
+        # print(f'({ind0},{ind1})')
+        calfiles=calfiles[ind0:ind1]
+        file_inds=file_inds[ind0:ind1]
+    nodes, _, inclNodes = utils.generate_nodeDict(uvd)
+    sorted_ants, sortedSnapLocs, sortedSnapInputs = utils.sort_antennas(uvd)
+    freqs = (uvd.freq_array[0]) * 10 ** (-6)
+    if freq_range != 'all':
+        if freq_range_type=='mhz':
+            i1 = np.argmin(np.abs(np.subtract(freqs,freq_range[0])))
+            i2 = np.argmin(np.abs(np.subtract(freqs,freq_range[1])))
+            freqs_use = uvd.freq_array[0][i1:i2]
+        elif freq_range_type=='index':
+            freqs_use = uvd.freq_array[0][freq_range[0]:freq_range[1]]
+        uvd = uvd.select(frequencies=freqs_use, inplace=False)
+        freqs = uvd.freq_array[0] * 1e-6
+    maxants = 0
+    if pol=='XX':
+        polname='NN'
+    elif pol=='YY':
+        polname='EE'
+    else:
+        polname=''
+
+    for node in nodes:
+        if plot_nodes != 'all' and node not in plot_nodes:
+            continue
+        n = len(nodes[node]["ants"])
+        if n > maxants:
+            maxants = n
+    Nside = maxants
+    if plot_nodes == 'all':
+        Yside = len(inclNodes)
+    else:
+        Yside = len(plot_nodes)
+    h = cm_active.get_active(at_date=jd, float_format="jd")
+    ptitle = 1.92 / (Yside * 3)
+    fig, axes = plt.subplots(Yside, 12, figsize=(16, Yside * 3))
+    fig.suptitle(f"FHD Gains: {polname} Polarization", fontsize=14, y=1 + ptitle)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.subplots_adjust(left=0, bottom=0.1, right=0.9, top=1, wspace=0.1, hspace=0.3)
+    _,_,_,gains0 = djs_utils.read_fhd(datadir,pol=['XX','YY'],readModel=False,readGains=True,readRaw=False,readCal=False,file_range=file_inds[0])
+    d0 = gains0.get_gains(sorted_ants[0],pol)
+    lsts=[]
+    for t in file_inds:
+        t_ind = t - file_inds[0]
+        if t%20==0:
+            print(f't={t}')
+        i=-1
+        try:
+            _,_,_,uvg = djs_utils.read_fhd(datadir,pol=['XX','YY'],readModel=False,readGains=True,readRaw=False,readCal=False,file_range=t)
+            # return uvg
+        except:
+            print(f'oops at index {t}')
+            dat = np.zeros(np.shape(d0))
+        # print(cal.lst_array)
+        lsts.append(uvg.lst_range[0][0]*3.819719)
+        for _, n in enumerate(inclNodes):
+            slots_filled = []
+            if plot_nodes != 'all':
+                inclNodes = plot_nodes
+                if n not in plot_nodes:
+                    continue
+            i += 1
+            # print(f'i: {i}, n: {n}')
+            ants = nodes[n]["ants"]
+            j = 0
+            for _, a in enumerate(sorted_ants):
+                if a not in ants:
+                    continue
+                # print(a)
+                status = utils.get_ant_status(h, a)
+                slot = utils.get_slot_number(uvd, a, sorted_ants, sortedSnapLocs, sortedSnapInputs)
+                if slot > 12:
+                    print(f'ant {a}, slot {slot}')
+                slots_filled.append(slot)
+                abb = status_abbreviations[status]
+                ax = axes[i, slot]
+                try:
+                    if logscale is True:
+                        dat = np.transpose(np.log10(np.abs(uvg.get_gains(a, pol))))
+                    else:
+                        dat = np.transpose(np.abs(uvg.get_gains(a, pol)))
+                    if plotFlags:
+                        if t==file_inds[0]:
+                            print('Plotting flags')
+                        mask = np.transpose(uvg.get_flags(a,pol))
+                        dat = ma.masked_array(dat,mask=mask)
+                except:
+                    print(f'No gains found for index {t}')
+                    dat = np.zeros(np.shape(dat))
+                if plotType == "mean_sub":
+                    ms = np.subtract(dat, np.nanmean(dat, axis=0))
+                    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 3)]
+                    xticklabels = np.around(freqs[xticks], 0)
+                    xlabel = "Freq (MHz)"
+                    im = ax.imshow(
+                        ms,
+                        vmin=vmin,
+                        vmax=vmax,
+                        aspect="auto",
+                        interpolation="nearest",
+                        extent=[0,245,t_ind,t_ind-1],
+                        origin='upper'
+                    )
+                elif plotType == "raw":
+                    xticks = [int(i) for i in np.linspace(0, len(freqs) - 1, 3)]
+                    xticklabels = np.around(freqs[xticks], 0)
+                    xlabel = "Freq (MHz)"
+                    im = ax.imshow(
+                        dat, vmin=vmin, vmax=vmax, aspect="auto", interpolation="nearest",
+                        extent=[0,245,t_ind-1,t_ind],origin='upper'
+                    )
+                else:
+                    print(
+                        "##### plotType parameter must be either raw or mean_sub #####"
+                    )
+                if (len(xants) == 1 and a in exants[0]) or (len(xants)>1 and a in xants[0] and a in xants[1]):
+                    ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="purple")
+                elif len(xants)>1 and a in xants[0]:
+                    ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="red")
+                elif len(xants)>1 and a in xants[1]:
+                    ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="blue")
+                elif xants=={}:
+                    ax.set_title(
+                        f"{a} ({abb})", fontsize=10, backgroundcolor=status_colors[status]
+                    )
+                else:
+                    ax.set_title(f"{a} ({abb})", fontsize=10, backgroundcolor="green")
+                ax.set_ylim(len(file_inds),0)
+                if i == len(inclNodes) - 1:
+                    ax.set_xticks(xticks)
+                    ax.set_xticklabels(xticklabels)
+                    ax.set_xlabel(xlabel, fontsize=10)
+                    [t.set_rotation(70) for t in ax.get_xticklabels()]
+                else:
+                    ax.set_xticklabels([])
+                if j != 0 or slot!=0:
+                    ax.set_yticklabels([])
+                if t==file_inds[-1] and (j==0 and slot==0):
+                    yticks = [int(i) for i in np.linspace(0, len(file_inds)-1, 6)]
+                    yticklabels = [np.around(lsts[ytick], 1) for ytick in yticks]
+                    [t.set_fontsize(12) for t in ax.get_yticklabels()]
+                    ax.set_yticks(yticks)
+                    ax.set_yticklabels(yticklabels)
+                    ax.set_ylabel("Time(LST)", fontsize=10)
+                elif j==0 and slot !=0 and t==file_inds[-1]:
+                    ax = axes[i, 0]
+                    yticks = [int(i) for i in np.linspace(0, len(file_inds)-1, 6)]
+                    yticklabels = [np.around(lsts[ytick], 1) for ytick in yticks]
+                    [t.set_fontsize(12) for t in ax.get_yticklabels()]
+                    ax.set_ylabel("Time(LST)", fontsize=10)
+                    ax.set_yticks(yticks)
+                    ax.set_yticklabels(yticklabels)
+                    ax.set_frame_on(False)
+                    ax.axes.get_xaxis().set_visible(False)
+                else:
+                    yticks = [int(i) for i in np.linspace(0, len(file_inds)-1, 6)]
+                    ax.set_yticks(yticks)
+                if a in wrongAnts:
+                    for axis in ["top", "bottom", "left", "right"]:
+                        ax.spines[axis].set_linewidth(2)
+                        ax.spines[axis].set_color("red")
+                # ax.invert_yaxis()
+                
+                j += 1
+            for k in range(1, 12):
+                if k not in slots_filled:
+                    axes[i, k].axis("off")
+            if t==file_inds[-1]:
+                pos = ax.get_position()
+                cbar_ax = fig.add_axes([0.91, pos.y0, 0.01, pos.height])
+                cbar = fig.colorbar(im, cax=cbar_ax)
+                cbar.set_label(f"Node {n}", rotation=270, labelpad=15)
     if savefig is True:
         plt.savefig(outfig, bbox_inches="tight", dpi=100)
         if write_params:

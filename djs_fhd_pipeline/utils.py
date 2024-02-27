@@ -21,13 +21,25 @@ curr_file = __file__
 
 warnings.filterwarnings("ignore", message='This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.')
 
-def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,readModel=True,readGains=True):
-    model_files, vis_files, params_files, obs_files, flag_files, layout_files, settings_files, cal_files = getFhdFilenames(datadir,data_type='all')
+def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,readModel=True,readGains=True,
+            pol=['XX','YY'],print_message=False):
+    model_files, vis_files, params_files, obs_files, flag_files, layout_files, settings_files, cal_files = getFhdFilenames(datadir,data_type='all',pol=pol)
+    # print(obs_files[0])
+    file_inds=[]
+    for c in obs_files:
+        try:
+            file_inds.append(int(c.split('/')[-3].split('_')[-1]))
+        except:
+            continue
+    # print(file_inds)
     if file_range=='all':
         file_range=[0,len(model_files)]
+    elif type(file_range)==int:
+        file_range=[file_range-file_inds[0],file_range+1-file_inds[0]]
     cal = UVData()
     if readCal:
-        print('Reading cal')
+        if print_message:
+            print('Reading cal')
         cal.read(vis_files[file_range[0]:file_range[1]],
                  params_file=params_files[file_range[0]:file_range[1]],
                  obs_file=obs_files[file_range[0]:file_range[1]],
@@ -37,7 +49,8 @@ def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,read
                  axis='blt')
     model = UVData()
     if readModel:
-        print('Reading model')
+        if print_message:
+            print('Reading model')
         model.read(model_files[file_range[0]:file_range[1]],
                  params_file=params_files[file_range[0]:file_range[1]],
                  obs_file=obs_files[file_range[0]:file_range[1]],
@@ -47,13 +60,16 @@ def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,read
                    axis='blt')
     raw = UVData()
     if readRaw:
-        print('Reading raw')
+        if print_message:
+            print('Reading raw')
         with open(rawfiles, 'r') as file:
             rf = yaml.safe_load(file).split(' ')
         raw.read(rf[file_range[0]:file_range[1]], axis='blt')
     gains = UVCal()
     if readGains:
-        print('Reading gains')
+        # print(file_range)
+        if print_message:
+            print('Reading gains')
         gains.read_fhd_cal(cal_file=cal_files[file_range[0]:file_range[1]],
                 obs_file=obs_files[file_range[0]:file_range[1]],
                 layout_file=layout_files[file_range[0]:file_range[1]],
@@ -106,6 +122,24 @@ def get_incomplete_FHD_run_inds(fhd_dir,i_range='all',inc_no_beam=True):
                 ind = int(d.split('_')[-1])
                 if ind>=i_range[0] and ind<= i_range[1]:
                     inc_i.append(ind)
+    
+    bashstr = ''
+    for i in inc_i:
+        bashstr += str(i)
+        bashstr += ','
+    
+    return inc_i, bashstr[:-1]
+
+def get_incomplete_uvfits_run_inds(uvfits_dir,i_range='all'):
+    dirs = sorted(glob.glob(f'{uvfits_dir}/*.uvfits'))
+    inds = [int(d.split('_')[-1].split('.')[0]) for d in dirs]
+
+    if i_range=='all':
+        i_range = [1,np.max(inds)]
+    inc_i = []
+    for i in np.arange(i_range[0],i_range[1]):
+        if i not in inds:
+            inc_i.append(i)
     
     bashstr = ''
     for i in inc_i:
