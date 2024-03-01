@@ -43,4 +43,4 @@ array_job=1
 echo "Submitting array job"
 echo "Array String: ${arr_str}"
 
-sbatch --export=obs_file_name=${obs_file_name},N_obs=${N_obs},outdir=${outdir},xants=${xants_file},shape_dict=${shape_file} -p hera -o ${outdir}/SSINS_%a.out --mem=60G -J SSINS_Flagging_N --array=${arr_str} --dependency=afterany:3389732 /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/call_Run_HERA_SSINS.sh
+sbatch --export=obs_file_name=${obs_file_name},N_obs=${N_obs},outdir=${outdir},xants=${xants_file},shape_dict=${shape_file} -p hera -o ${outdir}/SSINS_%a.out --mem=60G -J SSINS_Flagging_N --array=${arr_str} --dependency=afterany:3639091 /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/call_Run_HERA_SSINS.sh

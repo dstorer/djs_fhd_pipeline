@@ -203,6 +203,13 @@ ins.metric_array[:, where_FM] = np.ma.masked
 ins.metric_ms = ins.mean_subtract()
 ins.history += "Manually flagged the FM band. "
 
+# Flag known emitters for H6C data
+ins.metric_array[:, 877:882] = np.ma.masked
+ins.metric_array[:, 1014:1018] = np.ma.masked
+ins.metric_array[:, 1049:1053] = np.ma.masked
+ins.metric_ms = ins.mean_subtract()
+ins.history += "Manually flagged RFI at 154.2MHz, 170.9MHz, and 175.1MHz"
+
 # Make a filter with specified settings
 with open(args.shape_dict, 'r') as shape_file:
     shape_dict = yaml.safe_load(shape_file)
