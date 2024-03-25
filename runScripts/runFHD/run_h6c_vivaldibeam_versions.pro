@@ -25,7 +25,7 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   recalculate_all=1
   no_png=1
   cleanup=0
-  ps_export=0
+  ;ps_export=0 ; Commented out on 3/25/24
 
   catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
   calibration_catalog_file_path="/lustre/aoc/projects/hera/dstorer/Setup/FHD/catalog_data/GLEAM_v2_plus_rlb2019.sav"
