@@ -47,7 +47,7 @@ curr_path = os.path.abspath(__file__)
 print(f'running {curr_path}')
 dir_path = os.path.dirname(os.path.realpath(__file__))
 githash = subprocess.check_output(['git', '-C', str(dir_path), 'rev-parse', 'HEAD']).decode('ascii').strip()
-print(f'githash: {githash}')
+print(f'djs_fhd_pipeline githash: {githash}')
 print(f'pyuvdata version: {pyuvdata.__version__}')
 print(f'numpy version: {np.__version__} \n')
 
@@ -74,7 +74,7 @@ for i in range(0,len(file_names),N):
     if int(array_job) == 1:
         if int(args.ind) != i//N:
             continue
-        print(f'Running index {args.ind} of array job')
+        print(f'Running index {args.ind} of array job \n')
     elif i==0:
         print('Running all files in obs_files')
     data = file_names[i:i+N]
@@ -82,22 +82,29 @@ for i in range(0,len(file_names),N):
     ssins = ssins_files[i//N]
     print('SSINS file:')
     print(ssins)
+    print('Data files:')
+    print(data)
     print('\nreading data \n')
     uvd = UVData()
     uvd.read(data)
     if per_pol==0:
-        with open(args.xants, 'r') as xfile:
+        if os.path.isfile(args.xants):
+            exants = args.xants
+        else:
+            exants = f'{args.xants}.yml'
+        with open(exants, 'r') as xfile:
             xants = yaml.safe_load(xfile)
         use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
+        print(f'Performing combined polarization antenna flagging using exants file: \n {exants}')
         uvd.select(antenna_nums=use_ants)
     elif per_pol==1:
         exants_x = f'{args.xants}_X.yml'
         exants_y = f'{args.xants}_Y.yml'
         if os.path.isfile(exants_x) and os.path.isfile(exants_y):
-            print('Performing per-polarization antenna flagging')
+            print(f'Performing per-polarization antenna flagging using exants files:\n {exants_x} \n {exants_y}')
             uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y)
         else:
-            raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_<X and Y>.yml must exist."
+            raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_X.yml and _Y>.yml must exist."
     else:
         raise "Per pol must be set to either 0 or 1."
     print('Reading SSINS \n')

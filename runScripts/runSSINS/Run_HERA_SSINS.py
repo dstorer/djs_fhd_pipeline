@@ -184,7 +184,7 @@ else:
 
     ins = INS(ss)
 
-# Clear some memory??
+# Clear some memory
 del ss
 
 # Write the raw data and z-scores to h5 format

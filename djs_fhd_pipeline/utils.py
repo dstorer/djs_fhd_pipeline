@@ -77,17 +77,23 @@ def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,read
     return raw, cal, model, gains
 
 def apply_per_pol_flags(uv,exants_x,exants_y):
+    # Get xants from files
     with open(exants_x, 'r') as xfile:
         xants_x = yaml.safe_load(xfile)
     with open(exants_y, 'r') as xfile:
         xants_y = yaml.safe_load(xfile)
+
+    # Get set of antennas to fully exclude if they are in xants_x and xants_y
     use_ants = []
     for a in uv.get_ants():
         if a in xants_x and a in xants_y:
             continue
         else:
             use_ants.append(a)
+    # Remove ants flagged for both pols from data entirely
     uv.select(antenna_nums=use_ants)
+
+    # Determine if each baseline should be flagged. If either pol is flagged, both cross pols will also be flagged. I.E. if an antenna is in xants_x but not in xants_y, the polarizations XX, XY, and YX will all be flagged, and only YY will remain unflagged.
     antpairpols = uv.get_antpairpols()
     x_flag_bls = []
     y_flag_bls = []
@@ -100,6 +106,8 @@ def apply_per_pol_flags(uv,exants_x,exants_y):
                 y_flag_bls.append(a)
     ex_d = uv.get_data(use_ants[1],use_ants[2],'XX')
     flags = np.ones((np.shape(ex_d)[0],1,np.shape(ex_d)[1],1))
+
+    # For each baseline that was determined to be flagged, manually set the flag array to all ones.
     for bl in y_flag_bls:
         uv.set_flags(flags,bl)
     for bl in x_flag_bls:
@@ -164,6 +172,7 @@ def get_exants(write_yaml=False,outfile='',keep_ants=[],**kwargs):
             os.mkdir(dirname)
         with open(outfile, 'w') as file:
             yaml.dump(exants,file)
+        return exants
     else:
         return exants
 
