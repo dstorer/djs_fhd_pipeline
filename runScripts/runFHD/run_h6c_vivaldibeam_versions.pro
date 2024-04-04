@@ -65,6 +65,114 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   
   case case_name of
 
+    'matchingFlags_writeHealpix_withPixels_minCal40_nff0': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      n_pol=2
+      save_beam_metadata_only=0
+      write_healpix_fits=1
+      snapshot_healpix_export=1
+      save_uvf=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      ps_export=1
+      no_frequency_flagging=0
+      no_calibration_frequency_flagging=0
+      min_baseline=1.
+      min_cal_baseline=40.
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
+    'matchingFlags_writeHealpix_withPixels_minCal40': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      n_pol=2
+      save_beam_metadata_only=0
+      write_healpix_fits=1
+      snapshot_healpix_export=1
+      save_uvf=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      ps_export=1
+      no_frequency_flagging=1
+      no_calibration_frequency_flagging=1
+      min_baseline=1.
+      min_cal_baseline=40.
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
+    'matchingFlags_writeHealpix_withPixels': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      n_pol=2
+      save_beam_metadata_only=0
+      write_healpix_fits=1
+      snapshot_healpix_export=1
+      save_uvf=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      ps_export=1
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
+    'perPolAntFlagging_writeHealpix_withPixels': begin
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      n_pol=2
+      save_beam_metadata_only=0
+      write_healpix_fits=1
+      snapshot_healpix_export=1
+      save_uvf=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      ps_export=1
+
+      sidelobe_subtract=0
+      export_images=1
+      recalculate_all = 0
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+    end
+    
     'perPolAntFlagging_testFreqFlagging': begin
       beam_clip_floor=1
       mapfn_recalculate=0

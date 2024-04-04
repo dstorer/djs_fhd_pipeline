@@ -204,9 +204,9 @@ ins.metric_ms = ins.mean_subtract()
 ins.history += "Manually flagged the FM band. "
 
 # Flag known emitters for H6C data
-ins.metric_array[:, 877:882] = np.ma.masked
-ins.metric_array[:, 1014:1018] = np.ma.masked
-ins.metric_array[:, 1049:1053] = np.ma.masked
+ins.metric_array[:, 878:881] = np.ma.masked
+ins.metric_array[:, 1015:1017] = np.ma.masked
+ins.metric_array[:, 1050:1053] = np.ma.masked
 ins.metric_ms = ins.mean_subtract()
 ins.history += "Manually flagged RFI at 154.2MHz, 170.9MHz, and 175.1MHz"
 
@@ -220,7 +220,7 @@ sig_thresh['streak'] = args.streak_sig
 mf = MF(ins.freq_array, sig_thresh, shape_dict=shape_dict, tb_aggro=args.tb_aggro)
 
 # Do flagging
-mf.apply_match_test(ins, time_broadcast=True)
+mf.apply_match_test(ins, time_broadcast=False)
 # ins.history += f"Flagged using apply_match_test on SSINS {version_hist_substr}."
 
 cp.INS_plot(ins, f'{prefix}_FLAGGED', vmin=0, vmax=20000, ms_vmin=-5, ms_vmax=5)
