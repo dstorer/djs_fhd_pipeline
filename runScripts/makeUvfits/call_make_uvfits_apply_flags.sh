@@ -18,10 +18,11 @@ echo "write_minis: ${write_minis}"
 echo "num_times: ${num_times}"
 echo "array_job: ${array_job}"
 echo "phase: ${phase}"
+echo "flag_fraction: ${flag_fraction}"
 
 
 
-python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -p ${per_pol} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times} --ind ${SLURM_ARRAY_TASK_ID} -a ${array_job} -e ${phase}
+python -u /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/makeUvfits/make_uvfits_with_flags.py -f ${obs_file_name} -s ${ssins_files} -o ${outdir} -N ${N_combine} -x ${xants} -p ${per_pol} -b ${band} -I ${internode_only} -S ${intersnap_only} -m ${write_minis} -n ${num_times} --ind ${SLURM_ARRAY_TASK_ID} -a ${array_job} -e ${phase} -F ${flag_fraction}
 
 echo "JOB INFO"
 squeue -j $SLURM_JOBID

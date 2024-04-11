@@ -36,8 +36,9 @@ parser.add_argument("-a", "--array_job", default=0,
                     help='Indicates whether the job is an array job. If so, only one file, indicated by --ind, will be exected. Otherwise, all files in obs_files will be executed')
 parser.add_argument("--ind", default=0,
                     help='File index to run on')
-parser.add_argument('-e', '--phase', default='perobs',
+parser.add_argument('-e', '--phase', default=0,
                     help='Option to phase the data to the center of each observation (perobs) or to the center of the whole set of observations (perset)')
+parser.add_argument('-F', '--flag_fraction', default=None, help='Fraction of band flagged by SSINS at which to just flag the whole band. Set to None to skip this step.')
 args = parser.parse_args()
 per_pol = int(args.per_pol)
 
@@ -87,26 +88,7 @@ for i in range(0,len(file_names),N):
     print('\nreading data \n')
     uvd = UVData()
     uvd.read(data)
-    if per_pol==0:
-        if os.path.isfile(args.xants):
-            exants = args.xants
-        else:
-            exants = f'{args.xants}.yml'
-        with open(exants, 'r') as xfile:
-            xants = yaml.safe_load(xfile)
-        use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
-        print(f'Performing combined polarization antenna flagging using exants file: \n {exants}')
-        uvd.select(antenna_nums=use_ants)
-    elif per_pol==1:
-        exants_x = f'{args.xants}_X.yml'
-        exants_y = f'{args.xants}_Y.yml'
-        if os.path.isfile(exants_x) and os.path.isfile(exants_y):
-            print(f'Performing per-polarization antenna flagging using exants files:\n {exants_x} \n {exants_y}')
-            uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y)
-        else:
-            raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_X.yml and _Y>.yml must exist."
-    else:
-        raise "Per pol must be set to either 0 or 1."
+
     print('Reading SSINS \n')
     uvf = UVFlag()
     uvf.read(ssins)
@@ -155,7 +137,7 @@ for i in range(0,len(file_names),N):
 
     # Apply ssins flags
     print('Applying flags')
-    utils.apply_uvflag(uvd,uvf)
+    utils.apply_uvflag(uvd,uvf)  
 
     # Phasing
     if args.phase == 'perobs':
@@ -179,6 +161,38 @@ for i in range(0,len(file_names),N):
         print(f'Selecting freqs in index range [1254,1418]')
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
 
+    # Flag based on flag_fraction
+    ff = int(args.flag_fraction)/100
+    if ff>0:
+        fla = np.reshape(uv.flag_array,(uv.Ntimes,-1,uv.Nfreqs,uv.Npols))
+        for t in uv.Ntimes:
+            if np.sum(fla[t,:,:,:]) > ff*np.size(fla[t,:,:,:]):
+                print(f'Flagging integration {t} based on flag_fraction of {ff*70} percent')
+                fla[t,:,:,:] = np.ones(np.shape(fla[t,:,:,:]))
+        fla = np.reshape(fla, np.shape(uv.flag_array))
+        uv.flag_array = fla
+
+    if per_pol==0:
+        if os.path.isfile(args.xants):
+            exants = args.xants
+        else:
+            exants = f'{args.xants}.yml'
+        with open(exants, 'r') as xfile:
+            xants = yaml.safe_load(xfile)
+        use_ants = [ant for ant in uvd.get_ants() if ant not in xants]
+        print(f'Performing combined polarization antenna flagging using exants file: \n {exants}')
+        uvd.select(antenna_nums=use_ants)
+    elif per_pol==1:
+        exants_x = f'{args.xants}_X.yml'
+        exants_y = f'{args.xants}_Y.yml'
+        if os.path.isfile(exants_x) and os.path.isfile(exants_y):
+            print(f'Performing per-polarization antenna flagging using exants files:\n {exants_x} \n {exants_y}')
+            uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y)
+        else:
+            raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_X.yml and _Y>.yml must exist."
+    else:
+        raise "Per pol must be set to either 0 or 1."
+        
     # Write files
     version = f'{fname}_{args.band}'
     print(f'Phasing observation to time {phaseCenter}')
