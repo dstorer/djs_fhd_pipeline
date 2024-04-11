@@ -204,9 +204,9 @@ ins.metric_ms = ins.mean_subtract()
 ins.history += "Manually flagged the FM band. "
 
 # Flag known emitters for H6C data
-ins.metric_array[:, 878:881] = np.ma.masked
-ins.metric_array[:, 1015:1017] = np.ma.masked
-ins.metric_array[:, 1050:1053] = np.ma.masked
+ins.metric_array[:, 879:881] = np.ma.masked
+ins.metric_array[:, 1016:1017] = np.ma.masked
+ins.metric_array[:, 1051:1053] = np.ma.masked
 ins.metric_ms = ins.mean_subtract()
 ins.history += "Manually flagged RFI at 154.2MHz, 170.9MHz, and 175.1MHz"
 

@@ -14,8 +14,8 @@ stk_sig=20
 oth_sig=5
 t_aggro=0.5
 internode_only=0
-intersnap_only=1
-clobber=0
+intersnap_only=0
+clobber=1
 n_combine=10
 nodes='all'
 
