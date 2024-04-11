@@ -65,6 +65,76 @@ PRO run_h6c_vivaldibeam_versions,_Extra=extra
   
   case case_name of
 
+    'polyfit_nff0_deg10_MR': begin
+      no_calibration_frequency_flagging=0
+      no_frequency_flagging=0
+      flag_calibration=0
+      flag_visibilities=0
+      save_uvf=0
+      snapshot_healpix_export=0
+      ps_export=0
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      save_beam_metadata_only=1
+      n_pol=2
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=10
+      cal_phase_degree_fit=1
+
+      sidelobe_subtract=0
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      version=case_name
+    end
+
+    'polyfit_nff0_deg5': begin
+      no_calibration_frequency_flagging=0
+      no_frequency_flagging=0
+      flag_calibration=0
+      flag_visibilities=0
+      save_uvf=0
+      snapshot_healpix_export=0
+      ps_export=0
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      beam_threshold=0.1
+      deconvolve=0
+      save_beam_metadata_only=1
+      n_pol=2
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=7
+      cal_phase_degree_fit=1
+
+      sidelobe_subtract=0
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      version=case_name
+    end
+    
     'matchingFlags_writeHealpix_withPixels_minCal40_nff0': begin
       beam_clip_floor=1
       mapfn_recalculate=0
