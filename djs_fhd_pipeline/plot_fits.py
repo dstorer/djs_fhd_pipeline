@@ -211,9 +211,9 @@ def difference_images(image1, image2):
 
 
 def plot_fits_image(
-    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,gradient=False,
-    colorbar_label='Flux Density (Jy/beam)', plot_grid=True,
-    xlabel='RA (deg.)', ylabel='Dec. (deg.)',fontsize=12
+    fits_image, ax, color_scale, output_path, prefix, write_pixel_coordinates, log_scale, title='', ra_range=None, dec_range=None, log=False,gradient=False, incColorbar=True, cbar_label=True, cbar_ticks=True, yticks=True,
+    colorbar_label='Flux Density (Jy/beam)', plot_grid=False,
+    xlabel='RA (deg.)', ylabel='Dec. (deg.)',fontsize=12,ticklabelsize=12
 ):
 
 #     ra_range = [45,75]
@@ -244,20 +244,29 @@ def plot_fits_image(
             ],
         vmin=colorbar_range[0], vmax=colorbar_range[1], aspect='auto'
     )
-    ax.axis('equal')
+    # ax.axis('equal')
 #     ax.set_facecolor('gray')  # make plot background gray
 #     ax.set_facecolor('black')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel,fontsize=fontsize)
+    if ylabel != None:
+        ax.set_ylabel(ylabel,fontsize=fontsize)
     ax.set_title(title,fontsize=fontsize)
     if plot_grid:
         ax.grid(which='both', zorder=10, lw=0.5)
     cbar = plt.colorbar(im,ax=ax,pad=0.01)
     # Label colorbar:
-    cbar.ax.set_ylabel(colorbar_label, rotation=270, labelpad=15)
+    if cbar_label:
+        cbar.ax.set_ylabel(colorbar_label, rotation=270, labelpad=20, fontsize=fontsize-2)
+        cbar.ax.tick_params(labelsize=ticklabelsize)
+    if not cbar_ticks:
+        cbar.set_ticks([])
     bbox = ax.get_window_extent()
     width, height = bbox.width, bbox.height
-    ax.margins(0)
+    # ax.margins(0)
+    ax.tick_params(axis='x', labelsize=ticklabelsize)
+    ax.tick_params(axis='y', labelsize=ticklabelsize)
+    if not yticks:
+        ax.set_yticks([])
 #     ax.set_size_inches(2, 2)
 #     print(f'{width},{height}')
 #     if save_filename == '':
