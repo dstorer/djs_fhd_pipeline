@@ -160,17 +160,29 @@ for i in range(0,len(file_names),N):
         # 200-220 MHz
         print(f'Selecting freqs in index range [1254,1418]')
         uvd.select(frequencies=uvd.freq_array[0][1254:1418])
+    elif args.band=='mid_clip':
+        print(f'Selecting freqs in index range [882,1050]')
+        uvd.select(frequencies=uvd.freq_array[0][882:1050])
 
     # Flag based on flag_fraction
     ff = int(args.flag_fraction)/100
     if ff>0:
-        fla = np.reshape(uv.flag_array,(uv.Ntimes,-1,uv.Nfreqs,uv.Npols))
-        for t in uv.Ntimes:
+        print('Flagging based on flag_fraction')
+        newFlags=False
+        max_ff = 0
+        fla = np.reshape(uvd.flag_array,(uvd.Ntimes,-1,uvd.Nfreqs,uvd.Npols))
+        for t in range(uvd.Ntimes):
+            fl_frac = np.sum(fla[t,:,:,:])/np.size(fla[t,:,:,:])
             if np.sum(fla[t,:,:,:]) > ff*np.size(fla[t,:,:,:]):
-                print(f'Flagging integration {t} based on flag_fraction of {ff*70} percent')
                 fla[t,:,:,:] = np.ones(np.shape(fla[t,:,:,:]))
-        fla = np.reshape(fla, np.shape(uv.flag_array))
-        uv.flag_array = fla
+                newFlags=True
+                print(f'Flagging integration {t} based on flag_fraction of {fl_frac*100} percent')
+            if fl_frac>max_ff:
+                max_ff = fl_frac
+        fla = np.reshape(fla, np.shape(uvd.flag_array))
+        uvd.flag_array = fla
+        if newFlags is False:
+            print(f'No additional flagging applied based on flag_fraction. Maximum flag occupancy across all {uvd.Ntimes} times in data was {100*max_ff}%.')
 
     if per_pol==0:
         if os.path.isfile(args.xants):
@@ -185,9 +197,10 @@ for i in range(0,len(file_names),N):
     elif per_pol==1:
         exants_x = f'{args.xants}_X.yml'
         exants_y = f'{args.xants}_Y.yml'
-        if os.path.isfile(exants_x) and os.path.isfile(exants_y):
-            print(f'Performing per-polarization antenna flagging using exants files:\n {exants_x} \n {exants_y}')
-            uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y)
+        exants_b = f'{args.xants}.yml'
+        if os.path.isfile(exants_x) and os.path.isfile(exants_y) and os.path.isfile(exants_b):
+            print(f'Performing per-polarization antenna flagging using exants files:\n {exants_x} \n {exants_y} \n {exants_b}')
+            uvd, use_ants = djs_utils.apply_per_pol_flags(uvd,exants_x,exants_y,exants_b)
         else:
             raise "When argument per_pol is set to 1, parameter provided for xants is treated as a prefix and files formatted as <xants file>_X.yml and _Y>.yml must exist."
     else:

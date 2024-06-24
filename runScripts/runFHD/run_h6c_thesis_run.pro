@@ -12,6 +12,7 @@ PRO run_h6c_thesis_run,_Extra=extra
   print, args[1]
   output_directory = args[2]
   case_name=args[3]
+  initial_cal=args[4]
   
   instrument = 'hera'
 
@@ -63,10 +64,51 @@ PRO run_h6c_thesis_run,_Extra=extra
   
   case case_name of
 
-    'thesis_v2': begin
+    'thesis_v2_deconvolve': begin
       save_uvf=0
       snapshot_healpix_export=0
       ps_export=0
+      write_healpix_fits=0
+      ; Note this is a different set of indices than previous runs, file names are only slightly different
+      restrict_hpx_inds='HERA_field0a_3x_inds.idlsave'
+      split_ps_export=0
+      allow_sidelobe_sources=0
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      save_beam_metadata_only=1
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=2
+      cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
+      deconvolve=1
+      max_deconvolution_components = 20000
+      n_pol=2
+
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      ;initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      initial_calibration=initial_cal
+    end
+    
+    'thesis_v2_updatedHpxInds_rephaseWeights0': begin
+      save_uvf=0
+      snapshot_healpix_export=1
+      ps_export=1
+      write_healpix_fits=1
+      ; Note this is a different set of indices than previous runs, file names are only slightly different
+      restrict_hpx_inds='HERA_field0a_3x_inds.idlsave'
+      split_ps_export=1
       allow_sidelobe_sources=1
 
       beam_clip_floor=1
@@ -79,6 +121,42 @@ PRO run_h6c_thesis_run,_Extra=extra
       cable_bandpass_fit=0
       cal_amp_degree_fit=2
       cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
+
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      ;initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      initial_calibration=initial_cal
+    end
+    
+    'thesis_v2_updatedHpxInds': begin
+      save_uvf=0
+      snapshot_healpix_export=1
+      ps_export=1
+      write_healpix_fits=1
+      ; Note this is a different set of indices than previous runs, file names are only slightly different
+      restrict_hpx_inds='HERA_field0a_3x_inds.idlsave'
+      split_ps_export=1
+      allow_sidelobe_sources=1
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      save_beam_metadata_only=1
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=2
+      cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
 
       export_images=1
       no_ps=0
@@ -87,8 +165,105 @@ PRO run_h6c_thesis_run,_Extra=extra
       return_cal_visibilities = 1
       rephase_weights = 01
       import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
-      initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
-      version=case_name
+      ;initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      initial_calibration=initial_cal
+    end
+    
+    'thesis_v2_rephaseWeights0': begin
+      save_uvf=0
+      snapshot_healpix_export=1
+      ps_export=1
+      write_healpix_fits=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      allow_sidelobe_sources=1
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      save_beam_metadata_only=1
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=2
+      cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
+
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 0
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration=initial_cal
+    end
+    
+    'thesis_v3': begin
+      save_uvf=0
+      snapshot_healpix_export=1
+      ps_export=1
+      write_healpix_fits=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      allow_sidelobe_sources=1
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      save_beam_metadata_only=0
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=2
+      cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
+
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      ;initial_calibration='/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459906/855_initialCal.sav'
+      initial_calibration=initial_cal
+    end
+    
+    'thesis_v2': begin
+      save_uvf=0
+      snapshot_healpix_export=1
+      ps_export=1
+      write_healpix_fits=1
+      restrict_hpx_inds='HERA_field0_3x_inds.idlsave'
+      split_ps_export=1
+      allow_sidelobe_sources=1
+
+      beam_clip_floor=1
+      mapfn_recalculate=0
+      kbinsize=0.5
+      dimension=1024.
+      save_beam_metadata_only=1
+
+      calibration_polyfit=1
+      cable_bandpass_fit=0
+      cal_amp_degree_fit=2
+      cal_phase_degree_fit=1
+      min_cal_baseline=35
+      ref_antenna=105
+
+      export_images=1
+      no_ps=0
+      no_png=0
+      recalculate_all = 1
+      return_cal_visibilities = 1
+      rephase_weights = 01
+      import_pyuvdata_beam_filepath='/lustre/aoc/projects/hera/dstorer/Setup/HERA-Beams/NicolasFagnoniBeams/NF_HERA_Vivaldi_efield_beam.fits'
+      initial_calibration=initial_cal
     end
     
     'thesis_v1_noPolyfit': begin

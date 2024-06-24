@@ -76,14 +76,17 @@ def read_fhd(datadir,rawfiles='',file_range='all',readRaw=True,readCal=True,read
                 settings_file=settings_files[file_range[0]:file_range[1]])
     return raw, cal, model, gains
 
-def apply_per_pol_flags(uv,exants_x,exants_y):
+def apply_per_pol_flags(uv,exants_x,exants_y,exants_b=None):
     # Get xants from files
     with open(exants_x, 'r') as xfile:
         xants_x = yaml.safe_load(xfile)
     with open(exants_y, 'r') as xfile:
         xants_y = yaml.safe_load(xfile)
+    if exants_b is not None:
+        with open(exants_b, 'r') as xfile:
+            xants_b = yaml.safe_load(xfile)
 
-    # Get set of antennas to fully exclude if they are in xants_x and xants_y
+    # Get set of antennas to fully exclude if they are in xants_x and xants_y or are in xants_b
     use_ants = []
     for a in uv.get_ants():
         if a in xants_x and a in xants_y:
@@ -92,6 +95,7 @@ def apply_per_pol_flags(uv,exants_x,exants_y):
             use_ants.append(a)
     # Remove ants flagged for both pols from data entirely
     uv.select(antenna_nums=use_ants)
+    print(f'After flagging, {len(uv.get_ants())} antennas in data')
 
     # Determine if each baseline should be flagged. If either pol is flagged, both cross pols will also be flagged. I.E. if an antenna is in xants_x but not in xants_y, the polarizations XX, XY, and YX will all be flagged, and only YY will remain unflagged.
     antpairpols = uv.get_antpairpols()
@@ -112,6 +116,8 @@ def apply_per_pol_flags(uv,exants_x,exants_y):
         uv.set_flags(flags,bl)
     for bl in x_flag_bls:
         uv.set_flags(flags,bl)
+    print(f'Flagging {len(y_flag_bls)} additional baselines based on Y pol flags')
+    print(f'Flagging {len(x_flag_bls)} additional baselines based on X pol flags')
     return uv, use_ants
 
 def get_incomplete_FHD_run_inds(fhd_dir,i_range='all',inc_no_beam=True):
@@ -137,6 +143,36 @@ def get_incomplete_FHD_run_inds(fhd_dir,i_range='all',inc_no_beam=True):
         bashstr += ','
     
     return inc_i, bashstr[:-1]
+
+def get_incomplete_FHD_run_inds_noSubdirs(fhd_dir,f_use,i_range='all',inc_no_beam=True):
+    dirs = sorted(glob.glob(f'{fhd_dir}/Healpix/*'))
+    inds = [int(d.split('_')[-3]) for d in dirs]
+    jds = [d.split('zen.')[1] for d in dirs]
+    jds = np.unique([float(j.split('_')[0]) for j in jds])
+    # print(jds)
+    # dfs = np.diff(jds)
+    # print(np.where(dfs>0.0005))
+    with open(f_use, 'r') as xfile:
+        X = yaml.safe_load(xfile).split(' ')
+    jds_use = [d.split('zen.')[1] for d in X]
+    jds_use = np.unique([float(j.split('_')[0]) for j in jds_use])
+
+    jds_missing = []
+    for i,jd in enumerate(jds_use):
+        if jd not in jds:
+            print(f'missing JD {jd}, index {i}')
+            jds_missing.append(jd)
+
+    # bad_inds = []
+    # if i_range=='all':
+    #     i_range = [1,np.max(inds)]
+    # for i in np.arange(i_range[0],i_range[1]):
+    #     i_c = inds.count(i)
+    #     if i_c<20:
+    #         print(f'Index {i} missing outputs')
+    #         bad_inds.append(i)
+    
+    return jds_missing
 
 def get_incomplete_uvfits_run_inds(uvfits_dir,i_range='all'):
     dirs = sorted(glob.glob(f'{uvfits_dir}/*.uvfits'))

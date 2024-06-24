@@ -527,14 +527,17 @@ def plotRaDecHists(fhd,gleam,param='RA',delta=0.15,sortBy=None,ratioThresh=5,sin
     fig = plt.figure(figsize=(20,6))
     ax = fig.add_subplot(1,1,1)
     
-    ras_fhd = [a[0][0] for a in spairs]
-    decs_fhd = [a[0][1] for a in spairs]
-    ras_gleam = [a[i][0] for a in spairs for i in range(1,len(a))]
-    decs_gleam = [a[i][1] for a in spairs for i in range(1,len(a))]
-    fhd_srcs = [x[0][0:2] for x in spairs]
-    fhd_x = [x[0] for x in fhd_srcs]
-    fhd_y = [x[1] for x in fhd_srcs]
-    pairs = [(np.average(x[1:],axis=0)[0],np.average(x[1:],axis=0)[1]) for x in spairs]
+    # ras_fhd = [a[0][0] for a in spairs]
+    # decs_fhd = [a[0][1] for a in spairs]
+    # ras_gleam = [a[i][0] for a in spairs for i in range(1,len(a))]
+    # decs_gleam = [a[i][1] for a in spairs for i in range(1,len(a))]
+    # fhd_srcs = [x[0][0:2] for x in spairs]
+    # fhd_x = [x[0] for x in fhd_srcs]
+    # fhd_y = [x[1] for x in fhd_srcs]
+    # pairs = [(np.average(x[1:],axis=0)[0],np.average(x[1:],axis=0)[1]) for x in spairs]
+    pairs = fhd + np.random.rand(np.shape(fhd))
+    pairs[:,0] += np.random.rand(np.shape(fhd))
+    pairs[:,1] += np.random.rand(np.shape(fhd))
     diffs = np.subtract(fhd_srcs,pairs)
     if units=='arcmin':
         diffs *=60

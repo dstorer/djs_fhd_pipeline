@@ -39,7 +39,7 @@ echo "calling /lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScript
 
 #xants_file="/lustre/aoc/projects/hera/dstorer/Projects/updatedHeraOnFHD/2459854/exants.yml"
 shape_file="/lustre/aoc/projects/hera/dstorer/Setup/djs_fhd_pipeline/runScripts/runSSINS/HERA_shape_dict.yml"
-band="mid"
+band="mid_clip"
 N_combine=10
 internode_only=0
 intersnap_only=0
